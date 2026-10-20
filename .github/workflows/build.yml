@@ -1,0 +1,82 @@
+name: Test/Build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Cached Konan
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle*') }}-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      - name: Linter (gradle)
+        run: ./gradlew spotlessCheck
+
+      - name: Check JVM and Android (host)
+        run: ./gradlew :crypto:jvmTest :crypto:testAndroidHostTest
+
+      # Runs the Kotlin implementations the native targets use, on a Linux binary.
+      - name: Check Linux native
+        run: ./gradlew :crypto:linuxX64Test
+
+      # Apple code compiles on Linux as metadata, so a CommonCrypto mistake fails here in
+      # minutes instead of in the macOS job.
+      - name: Check Apple code compiles
+        run: ./gradlew :crypto:compileAppleMainKotlinMetadata
+
+      - name: Build (gradle)
+        run: ./gradlew assemble
+
+  # Apple test binaries link and run only on macOS: this is the one place the CommonCrypto
+  # actuals (DigestInstance, MacInstance, AESCBC, SecureRandom) execute.
+  test-apple:
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Cached Konan
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle*') }}-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      # iosArm64 has no simulator to run on; compiling its tests catches device-only drift.
+      - name: Check iOS and macOS
+        run: ./gradlew :crypto:iosSimulatorArm64Test :crypto:macosArm64Test :crypto:compileTestKotlinIosArm64
