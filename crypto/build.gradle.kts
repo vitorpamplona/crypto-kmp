@@ -144,7 +144,12 @@ mavenPublishing {
 
     publishToMavenCentral(automaticRelease = true)
 
-    signAllPublications()
+    // Sign only when a key is configured: the release workflow passes one, while JitPack and
+    // local publishToMavenLocal builds have none and would otherwise fail on the signing task.
+    // Maven Central still rejects an unsigned upload, so a release can't slip out unsigned.
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
 
     pom {
         name = "Crypto for Kotlin Multiplatform"
