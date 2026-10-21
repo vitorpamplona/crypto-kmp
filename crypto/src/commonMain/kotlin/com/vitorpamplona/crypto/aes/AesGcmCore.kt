@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.equalsConstantTime
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -59,12 +60,21 @@ internal class AesGcmKey(
 ) {
     private val aes = AesBitsliced(key)
 
-    private val hashKey =
-        ByteArray(16).also {
-            val scratch = AesBitsliced.Scratch()
-            aes.encryptBlocks(it, 0, it, 0, 1, scratch)
-            scratch.clear()
-        }
+    // H = E(0^128). With a 12-byte nonce the first counter batch computes it alongside E(J0),
+    // saving an AES call; other nonce lengths need it before J0, so it's computed on its own.
+    // Every thread computes the same bytes, so a race just does the work twice, and @Volatile
+    // publishes the array whole.
+    @Volatile
+    private var computedHashKey: ByteArray? = null
+
+    private val hashKey: ByteArray
+        get() =
+            computedHashKey ?: ByteArray(16).also {
+                val scratch = AesBitsliced.Scratch()
+                aes.encryptBlocks(it, 0, it, 0, 1, scratch)
+                scratch.clear()
+                computedHashKey = it
+            }
 
     fun encrypt(
         nonce: ByteArray,
@@ -143,10 +153,13 @@ internal class AesGcmKey(
 
             var pos = 0
             var first = true
+            // The all-zero block in slot 0 of the first batch encrypts to H.
+            val computeHashKey = computedHashKey == null
             while (first || pos < length) {
                 var slot = 0
                 if (first) {
-                    j0.copyInto(blocks, 0)
+                    if (computeHashKey) slot++
+                    j0.copyInto(blocks, 16 * slot)
                     slot++
                 }
                 val dataSlot = slot
@@ -161,7 +174,10 @@ internal class AesGcmKey(
                     slot++
                 }
                 aes.encryptBlocks(blocks, 0, keystream, 0, slot, scratch)
-                if (first) keystream.copyInto(encryptedJ0, 0, 0, 16)
+                if (first) {
+                    if (computeHashKey) computedHashKey = keystream.copyOf(16)
+                    keystream.copyInto(encryptedJ0, 0, 16 * (dataSlot - 1), 16 * dataSlot)
+                }
 
                 val chunk = minOf(16 * (slot - dataSlot), length - pos)
                 val k = 16 * dataSlot
