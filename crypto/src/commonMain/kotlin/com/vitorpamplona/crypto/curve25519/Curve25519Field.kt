@@ -492,6 +492,10 @@ internal object Curve25519Field {
      * as p itself — into the unique one below p. The second pass then carries
      * without wrapping, so the top carry falls off and the remaining limbs are
      * exactly the base-2^25.5 digits of the answer.
+     *
+     * The digits are then streamed into the output through a bit accumulator.
+     * How many bytes each limb completes depends only on the limb widths, never
+     * on the limb values, so the loop runs the same way for every input.
      */
     fun pack25519(n: LongArray): ByteArray {
         val h = n.copyOf()
@@ -508,18 +512,21 @@ internal object Curve25519Field {
             h[i] -= c shl width
         }
         val o = ByteArray(32)
+        var acc = 0L
+        var accBits = 0
+        var idx = 0
         for (i in 0 until LIMBS) {
-            var v = h[i]
-            var bit = OFFSET[i]
-            while (v != 0L) {
-                val idx = bit shr 3
-                val shift = bit and 7
-                val room = 8 - shift
-                o[idx] = (o[idx].toLong() or ((v and ((1L shl room) - 1)) shl shift)).toByte()
-                v = v ushr room
-                bit += room
+            acc = acc or (h[i] shl accBits)
+            accBits += if (i and 1 == 0) 26 else 25
+            while (accBits >= 8) {
+                o[idx++] = acc.toByte()
+                acc = acc ushr 8
+                accBits -= 8
             }
         }
+        // 255 bits: 31 whole bytes, and the top 7 bits left in the accumulator.
+        o[idx] = acc.toByte()
+        h.fill(0)
         return o
     }
 

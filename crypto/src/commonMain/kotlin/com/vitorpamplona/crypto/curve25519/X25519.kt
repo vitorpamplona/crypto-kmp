@@ -50,9 +50,16 @@ object X25519 {
 
     /**
      * Perform X25519 Diffie-Hellman key agreement.
+     *
+     * The public key is taken as RFC 7748 §5 says: the top bit is ignored and a
+     * u-coordinate at or above p is used as is, which reduces it mod p.
+     *
      * @param privateKey 32-byte private key
      * @param publicKey 32-byte public key
      * @return 32-byte shared secret
+     * @throws IllegalArgumentException if either key is not 32 bytes, or if the
+     *   shared secret is all zeros, which happens exactly when [publicKey] is a
+     *   point of small order (RFC 7748 §6.1). The check runs in constant time.
      */
     fun dh(
         privateKey: ByteArray,
@@ -63,9 +70,11 @@ object X25519 {
 
         val result = scalarmult(privateKey, publicKey)
 
-        require(!result.all { it == 0.toByte() }) {
-            "DH produced all-zero shared secret (possible small-subgroup attack)"
-        }
+        // OR every byte together: an early exit would leak how many leading
+        // bytes of the shared secret are zero.
+        var acc = 0
+        for (b in result) acc = acc or b.toInt()
+        require(acc != 0) { "DH produced all-zero shared secret (small-order public key)" }
 
         return result
     }
@@ -158,7 +167,13 @@ object X25519 {
         // inversion's scratch element.
         Curve25519Field.inv25519Into(c, c, tmp)
         Curve25519Field.mulInto(a, a, c)
-        return Curve25519Field.pack25519(a)
+        val out = Curve25519Field.pack25519(a)
+
+        // The clamped scalar and every element the ladder touched: a holds the
+        // result, and the rest are steps on the way to it.
+        z.fill(0)
+        for (t in arrayOf(a, b, c, d, e, f, g, h, dd, ff, da, cb, cc, tmp)) t.fill(0)
+        return out
     }
 }
 

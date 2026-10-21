@@ -42,6 +42,7 @@ object Ed25519 {
         val seed = RandomInstance.bytes(SEED_LENGTH)
         val publicKey = derivePublicKey(seed)
         val privateKey = seed + publicKey
+        seed.fill(0)
         return Ed25519KeyPair(privateKey, publicKey)
     }
 
@@ -100,7 +101,6 @@ object Ed25519 {
         prefix.fill(0)
         rHash.fill(0)
         r.fill(0)
-        x.fill(0)
         return signature
     }
 
@@ -274,6 +274,10 @@ object Ed25519 {
         val h = LongArray(10)
         val t1 = LongArray(10)
         val t2 = LongArray(10)
+
+        fun wipe() {
+            for (t in arrayOf(a, b, c, d, e, f, g, h, t1, t2)) t.fill(0)
+        }
     }
 
     /** In-place point addition: p += q. */
@@ -341,6 +345,10 @@ object Ed25519 {
             addPointInPlace(result, result, scratch)
             cswap(result, q, b)
         }
+        // q ends one P ahead of the result, and the scratch holds the last
+        // step; with a secret scalar neither should outlive the call.
+        for (t in q) t.fill(0)
+        scratch.wipe()
         return result
     }
 
@@ -495,6 +503,7 @@ object Ed25519 {
 
     /**
      * Reduce a 64-element long array modulo L, returning a 32-byte result.
+     * Consumes [x]: it is left zeroed, since it can hold a secret nonce.
      */
     private fun modL(x: LongArray): ByteArray {
         for (i in 63 downTo 32) {
@@ -526,6 +535,7 @@ object Ed25519 {
             x[i + 1] += x[i] shr 8
             r[i] = (x[i] and 0xFF).toByte()
         }
+        x.fill(0)
         return r
     }
 
