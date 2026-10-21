@@ -20,8 +20,14 @@
  */
 package com.vitorpamplona.crypto.aes
 
+/** Throws [IllegalArgumentException] unless [iv] is a 16-byte AES-CBC IV. */
+internal fun requireCbcIv(iv: ByteArray) = require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
+
 /**
- * AES-CBC with PKCS#7 padding (NIST SP 800-38A §6.2), matching JCA's "AES/CBC/PKCS5Padding".
+ * AES-CBC without padding (NIST SP 800-38A §6.2), matching JCA's "AES/CBC/NoPadding": the
+ * block-cipher half of [AESCBC] on Linux, which [cbcEncrypt] and [cbcDecrypt] wrap in PKCS#7.
+ * Both directions take whole 16-byte blocks and a 16-byte IV; the callers check.
+ *
  * Holds the key schedule, so one instance serves many messages; it is thread-safe.
  */
 internal class AesCbcKey(
@@ -33,12 +39,8 @@ internal class AesCbcKey(
         iv: ByteArray,
         plaintext: ByteArray,
     ): ByteArray {
-        require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
         val scratch = AesBitsliced.Scratch()
-        val pad = 16 - plaintext.size % 16
-        val out = plaintext.copyOf(plaintext.size + pad)
-        out.fill(pad.toByte(), plaintext.size, out.size)
-
+        val out = plaintext.copyOf()
         var prev = iv
         var prevOffset = 0
         for (o in out.indices step 16) {
@@ -49,18 +51,14 @@ internal class AesCbcKey(
             prev = out
             prevOffset = o
         }
+        scratch.clear()
         return out
     }
 
-    /** Throws [IllegalArgumentException] on a length that is not whole blocks or on bad padding. */
     fun decrypt(
         iv: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray {
-        require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
-        require(ciphertext.isNotEmpty() && ciphertext.size % 16 == 0) {
-            "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${ciphertext.size}"
-        }
         val scratch = AesBitsliced.Scratch()
         val out = ByteArray(ciphertext.size)
         var o = 0
@@ -69,25 +67,59 @@ internal class AesCbcKey(
             aes.decryptBlocks(ciphertext, o, out, o, blocks, scratch)
             o += 16 * blocks
         }
-        for (i in 0 until 16) {
+        scratch.clear()
+        for (i in 0 until minOf(16, out.size)) {
             out[i] = (out[i].toInt() xor iv[i].toInt()).toByte()
         }
         for (i in 16 until out.size) {
             out[i] = (out[i].toInt() xor ciphertext[i - 16].toInt()).toByte()
         }
-        return stripPkcs7(out)
+        return out
     }
 }
 
 /**
- * Removes the PKCS#7 padding from [padded], a whole number of decrypted 16-byte blocks, checking
- * every byte of the last block with no early exit. On bad padding it zeroes [padded] and throws
- * [IllegalArgumentException], so a caller never sees the unauthenticated plaintext.
+ * AES-CBC encryption with PKCS#7 padding, for every platform's [AESCBC]: pads [plaintext] to
+ * whole blocks, hands them to [encryptBlocks] (a CBC encryption without padding that returns a
+ * new array) and zeroes the padded copy.
+ */
+internal inline fun cbcEncrypt(
+    plaintext: ByteArray,
+    encryptBlocks: (ByteArray) -> ByteArray,
+): ByteArray {
+    val pad = 16 - plaintext.size % 16
+    val padded = plaintext.copyOf(plaintext.size + pad)
+    padded.fill(pad.toByte(), plaintext.size, padded.size)
+    try {
+        return encryptBlocks(padded)
+    } finally {
+        padded.fill(0)
+    }
+}
+
+/**
+ * AES-CBC decryption with PKCS#7 padding, for every platform's [AESCBC], and the one place its
+ * lengths are checked: throws [IllegalArgumentException] unless [ciphertext] is a non-empty
+ * multiple of 16 bytes, then hands it to [decryptBlocks] (a CBC decryption without padding that
+ * returns a new array) and strips the padding with [stripPkcs7].
+ */
+internal inline fun cbcDecrypt(
+    ciphertext: ByteArray,
+    decryptBlocks: (ByteArray) -> ByteArray,
+): ByteArray {
+    require(ciphertext.isNotEmpty() && ciphertext.size % 16 == 0) {
+        "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${ciphertext.size}"
+    }
+    return stripPkcs7(decryptBlocks(ciphertext))
+}
+
+/**
+ * Removes the PKCS#7 padding from [padded], a non-empty whole number of decrypted 16-byte
+ * blocks, checking every byte of the last block with no early exit. Returns the plaintext in a
+ * new array and zeroes [padded]. On bad padding it throws [IllegalArgumentException], so a
+ * caller never sees the unauthenticated plaintext.
  */
 internal fun stripPkcs7(padded: ByteArray): ByteArray {
-    require(padded.isNotEmpty() && padded.size % 16 == 0) {
-        "AES-CBC plaintext must be a non-empty multiple of 16 bytes, was ${padded.size}"
-    }
     val pad = padded[padded.size - 1].toInt() and 0xFF
     var bad = ((pad - 1) ushr 31) or ((16 - pad) ushr 31)
     for (i in 1..16) {
@@ -99,21 +131,7 @@ internal fun stripPkcs7(padded: ByteArray): ByteArray {
         padded.fill(0)
         throw IllegalArgumentException("AES-CBC padding is invalid")
     }
-    return padded.copyOf(padded.size - pad)
-}
-
-/** One-shot AES-CBC, for callers that use a key once. */
-internal object AesCbc {
-    fun encrypt(
-        key: ByteArray,
-        iv: ByteArray,
-        plaintext: ByteArray,
-    ): ByteArray = AesCbcKey(key).encrypt(iv, plaintext)
-
-    /** Throws [IllegalArgumentException] on a length that is not whole blocks or on bad padding. */
-    fun decrypt(
-        key: ByteArray,
-        iv: ByteArray,
-        ciphertext: ByteArray,
-    ): ByteArray = AesCbcKey(key).decrypt(iv, ciphertext)
+    val plaintext = padded.copyOf(padded.size - pad)
+    padded.fill(0)
+    return plaintext
 }

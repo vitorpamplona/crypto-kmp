@@ -21,20 +21,25 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
-import com.vitorpamplona.crypto.aes.AesCbcKey
 
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : SymmetricCipher {
-    // Expanded once, on first use, and reused by every call on this instance.
-    private val key by lazy { AesCbcKey(keyBytes) }
+    init {
+        requireCbcIv(iv)
+    }
 
-    actual override fun name(): String = "aes-cbc"
+    // Expanded here (which also checks the key size) and reused by every call on this
+    // instance; with the IV copy, later changes to keyBytes or iv don't reach it.
+    private val key = AesCbcKey(keyBytes)
+    private val fixedIv = iv.copyOf()
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(iv, bytesToEncrypt)
+    actual override fun name(): String = AES_CBC_NAME
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(iv, bytesToDecrypt)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = cbcEncrypt(bytesToEncrypt) { key.encrypt(fixedIv, it) }
+
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = cbcDecrypt(bytesToDecrypt) { key.decrypt(fixedIv, it) }
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {

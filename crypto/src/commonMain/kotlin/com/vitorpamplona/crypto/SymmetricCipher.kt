@@ -20,12 +20,26 @@
  */
 package com.vitorpamplona.crypto
 
+/**
+ * A symmetric cipher bound to one key and one nonce or IV, both fixed for the instance's life.
+ *
+ * Because the nonce is fixed, [encrypt] can be single-use: an implementation for which a reused
+ * nonce is catastrophic, like [com.vitorpamplona.crypto.aes.AESGCM], throws
+ * [IllegalStateException] on a second [encrypt]. Create one instance, with a fresh nonce, per
+ * message. [decrypt] and [decryptOrNull] can always be called any number of times.
+ */
 interface SymmetricCipher {
+    /** A short name for the algorithm, such as `aes-gcm`. */
     fun name(): String
 
     fun encrypt(bytesToEncrypt: ByteArray): ByteArray
 
+    /**
+     * Throws [IllegalArgumentException] when [bytesToDecrypt] does not authenticate, has bad
+     * padding, or has a length the cipher cannot have produced.
+     */
     fun decrypt(bytesToDecrypt: ByteArray): ByteArray
 
+    /** [decrypt], returning null in exactly the cases where it would throw. */
     fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
 }
