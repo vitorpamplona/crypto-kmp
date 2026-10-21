@@ -404,27 +404,22 @@ object Ed25519 {
         r.copyInto(p[1])
         Curve25519Field.GF1.copyInto(p[2])
 
-        // Recover x from y: x^2 = (y^2 - 1) / (d * y^2 + 1)
+        // Recover x from y: x^2 = u / v, with u = y^2 - 1 and v = d * y^2 + 1.
+        // ref10's square root of a ratio takes one exponentiation and no
+        // inversion: x = u * v^3 * (u * v^7)^((p - 5) / 8).
         val y2 = Curve25519Field.sqr(r)
-        val d = Curve25519Field.D
-        val num = Curve25519Field.sub(y2, Curve25519Field.GF1)
-        val den = Curve25519Field.add(Curve25519Field.mul(d, y2), Curve25519Field.GF1)
-        val denInv = Curve25519Field.inv25519(den)
-        val x2 = Curve25519Field.mul(num, denInv)
+        val u = Curve25519Field.sub(y2, Curve25519Field.GF1)
+        val v = Curve25519Field.add(Curve25519Field.mul(Curve25519Field.D, y2), Curve25519Field.GF1)
+        val v3 = Curve25519Field.mul(Curve25519Field.sqr(v), v)
+        val uv7 = Curve25519Field.mul(Curve25519Field.mul(Curve25519Field.sqr(v3), v), u)
+        var x = Curve25519Field.mul(Curve25519Field.mul(u, v3), Curve25519Field.pow2523(uv7))
 
-        // Try sqrt(x2)
-        var x = Curve25519Field.pow2523(x2)
-        x = Curve25519Field.mul(x, x2)
-
-        // Check: x^2 == x2?
-        val check = Curve25519Field.sub(Curve25519Field.sqr(x), x2)
-        if (!Curve25519Field.isZero(check)) {
-            // Try x * sqrt(-1)
+        // v * x^2 is u when x is a root, or -u when x * sqrt(-1) is one.
+        // Anything else means u / v is not a square: no point has this y.
+        val vx2 = Curve25519Field.mul(v, Curve25519Field.sqr(x))
+        if (!Curve25519Field.isZero(Curve25519Field.sub(vx2, u))) {
+            if (!Curve25519Field.isZero(Curve25519Field.add(vx2, u))) return null
             x = Curve25519Field.mul(x, Curve25519Field.I)
-            val check2 = Curve25519Field.sub(Curve25519Field.sqr(x), x2)
-            if (!Curve25519Field.isZero(check2)) {
-                return null
-            }
         }
 
         // x = 0 has no negative, so a sign bit on it is a second encoding.
