@@ -54,19 +54,25 @@ import com.vitorpamplona.crypto.sha2.sha256
 
 val digest = sha256("hello".encodeToByteArray())
 
-val mac = MacInstance("HmacSHA256", key)
+val macKey = RandomInstance.bytes(32)
+val mac = MacInstance("HmacSHA256", macKey)
 mac.update(message)
 val tag = mac.doFinal()
 
 val hkdf = Hkdf() // HMAC-SHA256
 val okm = hkdf.expand(hkdf.extract(ikm, salt), info, 42)
 
-val key = RandomInstance.bytes(32)
-val nonce = RandomInstance.bytes(12)
-val sealed = AESGCM(key, nonce).encrypt(plaintext, aad) // ciphertext || 16-byte tag
-val opened = AESGCM(key, nonce).decryptOrNull(sealed, aad) // null when the tag doesn't verify
+// One key per algorithm, and a fresh nonce for every message: never encrypt twice
+// under the same key and nonce.
+val aesKey = RandomInstance.bytes(32)
+val aesNonce = RandomInstance.bytes(12)
+val sealed = AESGCM(aesKey, aesNonce).encrypt(plaintext, aad) // ciphertext || 16-byte tag
+val opened = AESGCM(aesKey, aesNonce).decryptOrNull(sealed, aad) // null when the tag doesn't verify
 
-val boxed = ChaCha20Poly1305.encrypt(plaintext, aad, nonce, key)
+val chachaKey = RandomInstance.bytes(32)
+val chachaNonce = RandomInstance.bytes(12)
+val boxed = ChaCha20Poly1305.encrypt(plaintext, aad, chachaNonce, chachaKey)
+val unboxed = ChaCha20Poly1305.decryptOrNull(boxed, aad, chachaNonce, chachaKey)
 
 val alice = X25519.generateKeyPair()
 val bob = X25519.generateKeyPair()
@@ -88,7 +94,9 @@ Every platform accepts and rejects the same inputs, with the same exceptions:
   (case-insensitive), and throw `IllegalArgumentException` for any other.
 
 An `AESGCM` instance holds one key and one nonce, so it encrypts once: a second `encrypt` throws
-`IllegalStateException` instead of reusing the nonce. Decrypt with it as often as needed. The
+`IllegalStateException` instead of reusing the nonce. Decrypt with it as often as needed. That
+guard only sees one instance: two instances built from the same key and nonce still reuse it, so
+draw a fresh random nonce (or a counter that never repeats under the key) for every message. The
 default nonce is 16 random bytes. AES-CBC is not authenticated: pair it with a MAC
 (encrypt-then-MAC), or its padding errors become a padding oracle.
 

@@ -37,6 +37,10 @@ public const val AES_GCM_NAME: String = "aes-gcm"
  * [IllegalStateException], even from another thread. Create a new instance, with a fresh nonce,
  * for every message. [decrypt] and [decryptOrNull] can be called any number of times.
  *
+ * The guard only sees this instance: two instances built from the same key and nonce reuse it
+ * all the same. Never pass a key and nonce pair twice; a random nonce per message (the default)
+ * or a counter that never repeats under the key avoids it.
+ *
  * The default nonce is 16 random bytes rather than the 12 NIST recommends, because earlier
  * versions used 16 and data already sealed, or formats built on this class, depend on it. Any
  * non-empty length is valid: a nonce that is not 12 bytes is hashed into the initial counter
