@@ -23,7 +23,7 @@ package com.vitorpamplona.crypto.digest
 actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
-    private val digest = kotlinStreamingDigest(algorithm)
+    private val digest = kotlinStreamingDigest(DigestAlgorithm.of(algorithm))
 
     actual fun update(array: ByteArray) = digest.update(array)
 

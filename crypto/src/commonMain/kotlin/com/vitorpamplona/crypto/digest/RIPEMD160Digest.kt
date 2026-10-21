@@ -20,10 +20,18 @@
  */
 package com.vitorpamplona.crypto.digest
 
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.digests.RIPEMD160Digest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
+ */
+
 /**
- * Implementation of RIPEMD
+ * Implementation of RIPEMD-160.
  *
- * @see [ripemd160](http://www.esat.kuleuven.ac.be/~bosselae/ripemd160.html)
+ * Ported from Bouncy Castle's `RIPEMD160Digest` (MIT).
+ *
+ * @see [ripemd160](https://homes.esat.kuleuven.be/~bosselae/ripemd160.html)
  */
 class RIPEMD160Digest : GeneralDigest {
     private var h0 = 0
@@ -106,6 +114,8 @@ class RIPEMD160Digest : GeneralDigest {
         out: ByteArray,
         outOff: Int,
     ): Int {
+        // Checked before finish(), so a short buffer leaves the message in progress intact.
+        require(outOff >= 0 && DIGEST_LENGTH <= out.size - outOff) { "no room for a $DIGEST_LENGTH-byte digest" }
         finish()
 
         unpackWord(h0, out, outOff)
@@ -584,14 +594,6 @@ class RIPEMD160Digest : GeneralDigest {
         for (i in xArray.indices) {
             xArray[i] = 0
         }
-    }
-
-    override fun copy(): Memoable = RIPEMD160Digest(this)
-
-    override fun reset(other: Memoable) {
-        val d = other as RIPEMD160Digest
-
-        copyIn(d)
     }
 
     companion object {

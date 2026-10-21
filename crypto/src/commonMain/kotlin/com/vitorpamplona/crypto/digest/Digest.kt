@@ -20,8 +20,16 @@
  */
 package com.vitorpamplona.crypto.digest
 
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.Digest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
+ */
+
 /**
- * Message digest interface
+ * Message digest interface, implemented by [RIPEMD160Digest] and [KeccakDigest].
+ *
+ * Ported from Bouncy Castle's `Digest` (MIT).
  */
 interface Digest {
     /**
