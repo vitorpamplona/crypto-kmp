@@ -22,6 +22,7 @@ package com.vitorpamplona.crypto.curve25519
 
 import com.vitorpamplona.crypto.hexToByteArray
 import com.vitorpamplona.crypto.toHexKey
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -87,6 +88,27 @@ class X25519Test {
         assertEquals(bobPublic, X25519.publicFromPrivate(bobPrivate.hexToByteArray()).toHexKey())
         assertEquals(shared, X25519.dh(alicePrivate.hexToByteArray(), bobPublic.hexToByteArray()).toHexKey())
         assertEquals(shared, X25519.dh(bobPrivate.hexToByteArray(), alicePublic.hexToByteArray()).toHexKey())
+    }
+
+    @Test
+    fun publicFromPrivateMatchesTheLadder() {
+        // publicFromPrivate takes the fixed-base path on the Edwards curve; dh
+        // with u = 9 runs the Montgomery ladder. Both must give X25519(k, 9),
+        // for the full clamped k and whatever the bits clamping throws away.
+        val random = Random(7748)
+        val nine = ByteArray(32).also { it[0] = 9 }
+        val keys =
+            List(200) { random.nextBytes(32) } +
+                listOf(
+                    ByteArray(32),
+                    ByteArray(32) { 0xFF.toByte() },
+                    ByteArray(32) { 0x88.toByte() },
+                    alicePrivate.hexToByteArray(),
+                    bobPrivate.hexToByteArray(),
+                )
+        for (k in keys) {
+            assertEquals(X25519.dh(k, nine).toHexKey(), X25519.publicFromPrivate(k).toHexKey(), k.toHexKey())
+        }
     }
 
     @Test

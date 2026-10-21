@@ -24,21 +24,22 @@ import com.vitorpamplona.crypto.equalsConstantTime
 import com.vitorpamplona.crypto.random.RandomInstance
 
 /*
- * The point arithmetic, the scalar multiplication and the reduction mod L
- * follow TweetNaCl by Daniel J. Bernstein, Bernard van Gastel, Wesley Janssen,
- * Tanja Lange, Peter Schwabe and Sjaak Smetsers (public domain). Point
- * decompression uses ref10's square root of a ratio, and verification
- * rejects what libsodium's does; ref10 is by Daniel J. Bernstein, Niels Duif,
- * Tanja Lange, Peter Schwabe and Bo-Yin Yang (public domain).
+ * The reduction mod L follows TweetNaCl by Daniel J. Bernstein, Bernard van
+ * Gastel, Wesley Janssen, Tanja Lange, Peter Schwabe and Sjaak Smetsers (public
+ * domain). The point arithmetic, point decompression and both scalar
+ * multiplications, in [Ed25519Group], follow ref10 by Daniel J. Bernstein,
+ * Niels Duif, Tanja Lange, Peter Schwabe and Bo-Yin Yang (public domain), and
+ * verification rejects what libsodium's does.
  */
 
 /**
  * Ed25519 digital signatures (RFC 8032), in pure Kotlin over [Curve25519Field].
  *
  * Every platform runs this same code rather than a platform provider, whose
- * Ed25519 support varies across Android API levels. Signing touches the secret
- * scalar only through branch-free, mask-based selection; being pure Kotlin it
- * carries no hardware constant-time guarantee.
+ * Ed25519 support varies across Android API levels. Key generation and signing
+ * touch the secret scalar only through branch-free, mask-based selection;
+ * being pure Kotlin they carry no hardware constant-time guarantee.
+ * Verification handles only public data and runs in variable time.
  *
  * Private key format: 32-byte seed + 32-byte public key (64 bytes total). Only
  * the seed is used: [sign] and [publicFromPrivate] derive the public key from
@@ -83,14 +84,18 @@ public object Ed25519 {
         // tampered second half would go into the challenge below, and two
         // signatures of one message under seed||A and seed||A' share r but not
         // the challenge: two equations, enough to solve for a.
-        val publicKey = packPoint(scalarMultBase(scalar))
+        val point = GeP3()
+        Ed25519Group.scalarMultBase(point, scalar)
+        val publicKey = Ed25519Group.encode(point)
 
         // r = SHA-512(prefix || message) mod L
         val rHash = sha512(prefix, message)
         val r = reduce(rHash)
 
         // R = [r]B
-        val rBytes = packPoint(scalarMultBase(r))
+        Ed25519Group.scalarMultBase(point, r)
+        val rBytes = Ed25519Group.encode(point)
+        point.wipe()
 
         // S = (r + SHA-512(R || A || message) * a) mod L
         val hram = reduce(sha512(rBytes, publicKey, message))
@@ -148,29 +153,23 @@ public object Ed25519 {
         // Check s < L
         if (!isCanonicalScalar(sBytes)) return false
 
-        val aPoint = unpackPoint(publicKey) ?: return false
-        if (hasSmallOrder(aPoint)) return false
+        val aPoint = Ed25519Group.decodeVartime(publicKey) ?: return false
+        if (Ed25519Group.hasSmallOrder(aPoint)) return false
         // R is compared as bytes at the end, which already rules out a
         // non-canonical R; decoding it here also rules out a small-order one.
-        val rPoint = unpackPoint(rBytes) ?: return false
-        if (hasSmallOrder(rPoint)) return false
+        val rPoint = Ed25519Group.decodeVartime(rBytes) ?: return false
+        if (Ed25519Group.hasSmallOrder(rPoint)) return false
 
         val hram = reduce(sha512(rBytes, publicKey, message))
 
-        // Verify: [s]B = R + [hram]A
-        // Equivalent: [s]B - [hram]A = R
-        // We compute: [s]B and [hram]A separately, then check
-        val sPoint = scalarMultBase(sBytes)
+        // [S]B = R + [hram]A holds exactly when [hram](-A) + [S]B encodes to R.
+        // Both multiplications happen in one variable-time pass, which is safe
+        // because A, hram, S and R are all public: nothing here is a secret.
+        Ed25519Group.negate(aPoint)
+        val rCheck = GeP2()
+        Ed25519Group.doubleScalarMultVartime(rCheck, hram, aPoint, sBytes)
 
-        // Negate A for subtraction: compute [-hram]A
-        val hramA = scalarMult(aPoint, hram)
-
-        // R_check = [s]B - [hram]A = [s]B + [-hram]A
-        val negHramA = negatePoint(hramA)
-        val rCheck = addPoints(sPoint, negHramA)
-        val rCheckBytes = packPoint(rCheck)
-
-        return rCheckBytes.contentEquals(rBytes)
+        return Ed25519Group.encode(rCheck).contentEquals(rBytes)
     }
 
     /**
@@ -222,245 +221,16 @@ public object Ed25519 {
     private fun derivePublicKey(seed: ByteArray): ByteArray {
         val expanded = expandSeed(seed)
         val scalar = expanded.copyOfRange(0, 32)
-        val publicKey = packPoint(scalarMultBase(scalar))
+        val point = GeP3()
+        Ed25519Group.scalarMultBase(point, scalar)
+        val publicKey = Ed25519Group.encode(point)
+        point.wipe()
         expanded.fill(0)
         scalar.fill(0)
         return publicKey
     }
 
     private fun sha512(vararg parts: ByteArray): ByteArray = ed25519Sha512(*parts)
-
-    // --- Extended Edwards point operations ---
-    // Point = Array of 4 LongArray(10), representing (X, Y, Z, T)
-    // where x = X/Z, y = Y/Z, x*y = T/Z
-
-    private fun newPoint(): Array<LongArray> =
-        arrayOf(
-            LongArray(10),
-            LongArray(10),
-            LongArray(10),
-            LongArray(10),
-        )
-
-    /** Set point to the identity (0, 1, 1, 0). */
-    private fun identityPoint(): Array<LongArray> {
-        val p = newPoint()
-        p[1][0] = 1
-        p[2][0] = 1
-        return p
-    }
-
-    /** Point addition on extended twisted Edwards curve. */
-    private fun addPoints(
-        p: Array<LongArray>,
-        q: Array<LongArray>,
-    ): Array<LongArray> {
-        val result =
-            arrayOf(
-                p[0].copyOf(),
-                p[1].copyOf(),
-                p[2].copyOf(),
-                p[3].copyOf(),
-            )
-        addPointInPlace(result, q, PointAddScratch())
-        return result
-    }
-
-    /**
-     * Scratch for [addPointInPlace].
-     *
-     * Extended-coordinate addition needs ten temporary field elements, and a
-     * scalar multiplication calls it 512 times — twice per scalar bit. Making
-     * each call allocate its own was the largest source of garbage in a
-     * signature-heavy workload: an allocation profile put 93% of all sampled
-     * allocation in `Curve25519Field.mul/add/sub`, most of it reached from here.
-     *
-     * One instance is created per scalar multiplication and reused by every
-     * step, so the loop allocates nothing.
-     */
-    private class PointAddScratch {
-        val a = LongArray(10)
-        val b = LongArray(10)
-        val c = LongArray(10)
-        val d = LongArray(10)
-        val e = LongArray(10)
-        val f = LongArray(10)
-        val g = LongArray(10)
-        val h = LongArray(10)
-        val t1 = LongArray(10)
-        val t2 = LongArray(10)
-
-        fun wipe() {
-            for (t in arrayOf(a, b, c, d, e, f, g, h, t1, t2)) t.fill(0)
-        }
-    }
-
-    /** In-place point addition: p += q. */
-    private fun addPointInPlace(
-        p: Array<LongArray>,
-        q: Array<LongArray>,
-        s: PointAddScratch,
-    ) {
-        // Every read of p and q happens in this first block. `scalarMult`
-        // doubles by passing the same point as both arguments, so nothing may
-        // be written back until these are done.
-        Curve25519Field.subInto(s.a, p[1], p[0])
-        Curve25519Field.subInto(s.t1, q[1], q[0])
-        Curve25519Field.mulInto(s.a, s.a, s.t1)
-        Curve25519Field.addInto(s.b, p[0], p[1])
-        Curve25519Field.addInto(s.t2, q[0], q[1])
-        Curve25519Field.mulInto(s.b, s.b, s.t2)
-        Curve25519Field.mulInto(s.c, p[3], q[3])
-        Curve25519Field.mulInto(s.c, s.c, Curve25519Field.D2)
-        Curve25519Field.mulInto(s.d, p[2], q[2])
-        Curve25519Field.addInto(s.d, s.d, s.d)
-
-        Curve25519Field.subInto(s.e, s.b, s.a)
-        Curve25519Field.subInto(s.f, s.d, s.c)
-        Curve25519Field.addInto(s.g, s.d, s.c)
-        Curve25519Field.addInto(s.h, s.b, s.a)
-
-        // Safe to write p now: e, f, g and h are scratch, so no later product
-        // reads anything we are about to overwrite.
-        Curve25519Field.mulInto(p[0], s.e, s.f)
-        Curve25519Field.mulInto(p[1], s.h, s.g)
-        Curve25519Field.mulInto(p[2], s.g, s.f)
-        Curve25519Field.mulInto(p[3], s.e, s.h)
-    }
-
-    /** Negate a point: (X, Y, Z, T) -> (-X, Y, Z, -T). */
-    private fun negatePoint(p: Array<LongArray>): Array<LongArray> {
-        val result = newPoint()
-        Curve25519Field.sub(Curve25519Field.GF0, p[0]).copyInto(result[0])
-        p[1].copyInto(result[1])
-        p[2].copyInto(result[2])
-        Curve25519Field.sub(Curve25519Field.GF0, p[3]).copyInto(result[3])
-        return result
-    }
-
-    /** Scalar multiplication: [s]P using double-and-add. */
-    private fun scalarMult(
-        p: Array<LongArray>,
-        s: ByteArray,
-    ): Array<LongArray> {
-        val result = identityPoint()
-        val q =
-            arrayOf(
-                p[0].copyOf(),
-                p[1].copyOf(),
-                p[2].copyOf(),
-                p[3].copyOf(),
-            )
-        // One workspace for all 512 additions below.
-        val scratch = PointAddScratch()
-        for (i in 255 downTo 0) {
-            val b = ((s[i shr 3].toInt() shr (i and 7)) and 1).toLong()
-            cswap(result, q, b)
-            addPointInPlace(q, result, scratch)
-            addPointInPlace(result, result, scratch)
-            cswap(result, q, b)
-        }
-        // q ends one P ahead of the result, and the scratch holds the last
-        // step; with a secret scalar neither should outlive the call.
-        for (t in q) t.fill(0)
-        scratch.wipe()
-        return result
-    }
-
-    /** Scalar multiplication with the base point: [s]B. */
-    private fun scalarMultBase(s: ByteArray): Array<LongArray> {
-        val basePoint = newPoint()
-        Curve25519Field.BX.copyInto(basePoint[0])
-        Curve25519Field.BY.copyInto(basePoint[1])
-        Curve25519Field.GF1.copyInto(basePoint[2])
-        Curve25519Field.mul(Curve25519Field.BX, Curve25519Field.BY).copyInto(basePoint[3])
-        return scalarMult(basePoint, s)
-    }
-
-    /** Conditional swap of two points. */
-    private fun cswap(
-        p: Array<LongArray>,
-        q: Array<LongArray>,
-        b: Long,
-    ) {
-        for (i in 0 until 4) {
-            Curve25519Field.sel25519(p[i], q[i], b)
-        }
-    }
-
-    /** Pack an extended Edwards point to 32-byte compressed encoding. */
-    private fun packPoint(p: Array<LongArray>): ByteArray {
-        val zi = Curve25519Field.inv25519(p[2])
-        val tx = Curve25519Field.mul(p[0], zi)
-        val ty = Curve25519Field.mul(p[1], zi)
-        val r = Curve25519Field.pack25519(ty)
-        r[31] = (r[31].toInt() xor (Curve25519Field.par25519(tx) shl 7)).toByte()
-        return r
-    }
-
-    /**
-     * Unpack a 32-byte compressed Edwards point (RFC 8032 §5.1.3).
-     *
-     * Returns null if the point is not on the curve or the encoding is not
-     * canonical: y at or above p (a second encoding of y - p), or x = 0 with
-     * the sign bit set (a second encoding of the same point). Only ever
-     * called on public data, so the early returns leak nothing.
-     */
-    private fun unpackPoint(s: ByteArray): Array<LongArray>? {
-        val p = newPoint()
-        val r = Curve25519Field.unpack25519(s)
-        // unpack25519 keeps y as given, so y >= p is caught by re-encoding:
-        // pack25519 reduces, and only a canonical y comes back unchanged.
-        val canonical = Curve25519Field.pack25519(r)
-        canonical[31] = (canonical[31].toInt() or (s[31].toInt() and 0x80)).toByte()
-        if (!canonical.contentEquals(s)) return null
-        val sign = (s[31].toInt() shr 7) and 1
-
-        r.copyInto(p[1])
-        Curve25519Field.GF1.copyInto(p[2])
-
-        // Recover x from y: x^2 = u / v, with u = y^2 - 1 and v = d * y^2 + 1.
-        // ref10's square root of a ratio takes one exponentiation and no
-        // inversion: x = u * v^3 * (u * v^7)^((p - 5) / 8).
-        val y2 = Curve25519Field.sqr(r)
-        val u = Curve25519Field.sub(y2, Curve25519Field.GF1)
-        val v = Curve25519Field.add(Curve25519Field.mul(Curve25519Field.D, y2), Curve25519Field.GF1)
-        val v3 = Curve25519Field.mul(Curve25519Field.sqr(v), v)
-        val uv7 = Curve25519Field.mul(Curve25519Field.mul(Curve25519Field.sqr(v3), v), u)
-        var x = Curve25519Field.mul(Curve25519Field.mul(u, v3), Curve25519Field.pow2523(uv7))
-
-        // v * x^2 is u when x is a root, or -u when x * sqrt(-1) is one.
-        // Anything else means u / v is not a square: no point has this y.
-        val vx2 = Curve25519Field.mul(v, Curve25519Field.sqr(x))
-        if (!Curve25519Field.isZero(Curve25519Field.sub(vx2, u))) {
-            if (!Curve25519Field.isZero(Curve25519Field.add(vx2, u))) return null
-            x = Curve25519Field.mul(x, Curve25519Field.I)
-        }
-
-        // x = 0 has no negative, so a sign bit on it is a second encoding.
-        if (sign == 1 && Curve25519Field.isZero(x)) return null
-
-        // Adjust sign
-        if (Curve25519Field.par25519(x) != sign) {
-            x = Curve25519Field.sub(Curve25519Field.GF0, x)
-        }
-
-        x.copyInto(p[0])
-        Curve25519Field.mul(p[0], p[1]).copyInto(p[3])
-        return p
-    }
-
-    /**
-     * True when [p] has small order: [8]P is the identity, which covers the
-     * eight points of the torsion subgroup. Three doublings, then the identity
-     * test in projective form: X = 0 and Y = Z.
-     */
-    private fun hasSmallOrder(p: Array<LongArray>): Boolean {
-        val q = arrayOf(p[0].copyOf(), p[1].copyOf(), p[2].copyOf(), p[3].copyOf())
-        val scratch = PointAddScratch()
-        repeat(3) { addPointInPlace(q, q, scratch) }
-        return Curve25519Field.isZero(q[0]) && Curve25519Field.isZero(Curve25519Field.sub(q[1], q[2]))
-    }
 
     // --- Scalar reduction modulo L ---
     // L = 2^252 + 27742317777372353535851937790883648493
