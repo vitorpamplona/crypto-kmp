@@ -27,7 +27,7 @@ import com.vitorpamplona.crypto.random.RandomInstance
  * The Montgomery ladder follows TweetNaCl's crypto_scalarmult by Daniel J.
  * Bernstein, Bernard van Gastel, Wesley Janssen, Tanja Lange, Peter Schwabe and
  * Sjaak Smetsers (public domain), over the ref10-style field in
- * [Curve25519Field].
+ * [Curve25519Field], with the conditional swaps merged as in RFC 7748 §5.
  */
 
 /**
@@ -97,6 +97,14 @@ public object X25519 {
         return scalarmult(privateKey, basepoint)
     }
 
+    /** A copy of [n], clamped per RFC 7748 §5. */
+    private fun clamp(n: ByteArray): ByteArray {
+        val z = n.copyOf()
+        z[0] = (z[0].toInt() and 248).toByte()
+        z[31] = ((z[31].toInt() and 127) or 64).toByte()
+        return z
+    }
+
     /**
      * X25519 scalar multiplication via Montgomery ladder (RFC 7748).
      *
@@ -107,10 +115,7 @@ public object X25519 {
         n: ByteArray,
         p: ByteArray,
     ): ByteArray {
-        val z = n.copyOf()
-        // Clamp scalar per RFC 7748 Section 5
-        z[0] = (z[0].toInt() and 248).toByte()
-        z[31] = ((z[31].toInt() and 127) or 64).toByte()
+        val z = clamp(n)
 
         val x = Curve25519Field.unpack25519(p)
         val a = Curve25519Field.GF1.copyOf()
@@ -133,10 +138,18 @@ public object X25519 {
         val cc = LongArray(10)
         val tmp = LongArray(10)
 
+        // TweetNaCl swaps a with b and c with d before every step and back
+        // after it. RFC 7748's ladder defers the swap back instead: two
+        // neighbouring bits that agree cancel, so each step swaps once, by the
+        // XOR of its bit and the previous one, and a last swap after the loop
+        // undoes the final bit's.
+        var swap = 0L
         for (i in 254 downTo 0) {
             val r = ((z[i shr 3].toLong() shr (i and 7)) and 1)
-            Curve25519Field.sel25519(a, b, r)
-            Curve25519Field.sel25519(c, d, r)
+            swap = swap xor r
+            Curve25519Field.sel25519(a, b, swap)
+            Curve25519Field.sel25519(c, d, swap)
+            swap = r
 
             // a, b, c and d are read only by these four lines; from here on
             // they are dead and can be overwritten with the new values.
@@ -164,14 +177,12 @@ public object X25519 {
             Curve25519Field.mulA24Into(tmp, cc)
             Curve25519Field.addInto(tmp, dd, tmp)
             Curve25519Field.mulInto(c, cc, tmp)
-
-            Curve25519Field.sel25519(a, b, r)
-            Curve25519Field.sel25519(c, d, r)
         }
+        Curve25519Field.sel25519(a, b, swap)
+        Curve25519Field.sel25519(c, d, swap)
 
-        // c := 1/c, then a := a/c. `tmp` is free again and serves as the
-        // inversion's scratch element.
-        Curve25519Field.inv25519Into(c, c, tmp)
+        // c := 1/c, then a := a/c.
+        Curve25519Field.inv25519Into(c, c)
         Curve25519Field.mulInto(a, a, c)
         val out = Curve25519Field.pack25519(a)
 
