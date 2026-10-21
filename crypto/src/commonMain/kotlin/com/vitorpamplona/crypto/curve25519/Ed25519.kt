@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.crypto.curve25519
 
+import com.vitorpamplona.crypto.equalsConstantTime
 import com.vitorpamplona.crypto.random.RandomInstance
 
 /*
@@ -562,6 +563,14 @@ object Ed25519 {
     }
 }
 
+/**
+ * An Ed25519 key pair: [privateKey] is the 32-byte seed followed by the 32-byte
+ * [publicKey].
+ *
+ * Equality and hash code go by the key bytes, not by array identity; the
+ * private keys are compared in constant time. [toString] prints no key bytes,
+ * so a pair that ends up in a log or an exception message leaks nothing.
+ */
 data class Ed25519KeyPair(
     val privateKey: ByteArray,
     val publicKey: ByteArray,
@@ -569,7 +578,7 @@ data class Ed25519KeyPair(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Ed25519KeyPair) return false
-        return privateKey.contentEquals(other.privateKey) && publicKey.contentEquals(other.publicKey)
+        return privateKey.equalsConstantTime(other.privateKey) && publicKey.contentEquals(other.publicKey)
     }
 
     override fun hashCode(): Int {
@@ -577,4 +586,6 @@ data class Ed25519KeyPair(
         result = 31 * result + publicKey.contentHashCode()
         return result
     }
+
+    override fun toString(): String = "Ed25519KeyPair(privateKey=<${privateKey.size} bytes>, publicKey=<${publicKey.size} bytes>)"
 }

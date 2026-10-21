@@ -26,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -252,6 +253,21 @@ class Ed25519Test {
         assertEquals(generated, rebuilt)
         val msg = "hi".encodeToByteArray()
         assertTrue(Ed25519.verify(msg, Ed25519.sign(msg, rebuilt.privateKey), generated.publicKey))
+    }
+
+    @Test
+    fun keyPairsCompareByContentAndPrintNoKeyBytes() {
+        val a = Ed25519.keyPairFromSeed(rfc8032[0].seed.hexToByteArray())
+        val b = Ed25519KeyPair(a.privateKey.copyOf(), a.publicKey.copyOf())
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+        assertNotEquals(a, Ed25519.keyPairFromSeed(rfc8032[1].seed.hexToByteArray()))
+
+        val text = a.toString()
+        for (key in listOf(a.privateKey, a.publicKey)) {
+            assertFalse(key.toHexKey().take(8) in text.lowercase(), text)
+            assertFalse(key.contentToString() in text, text)
+        }
     }
 
     // --- Rejections ---

@@ -26,6 +26,8 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 
 /** RFC 7748 §5.2 and §6.1 vectors, checked against JCA, plus the input edge cases of §5 and §6.1. */
 class X25519Test {
@@ -135,6 +137,21 @@ class X25519Test {
                     X25519.dh(alicePrivate.hexToByteArray(), point)
                 }
             }
+        }
+    }
+
+    @Test
+    fun keyPairsCompareByContentAndPrintNoKeyBytes() {
+        val a = X25519KeyPair(alicePrivate.hexToByteArray(), alicePublic.hexToByteArray())
+        val b = X25519KeyPair(alicePrivate.hexToByteArray(), alicePublic.hexToByteArray())
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+        assertNotEquals(a, X25519KeyPair(bobPrivate.hexToByteArray(), bobPublic.hexToByteArray()))
+
+        val text = a.toString()
+        for (key in listOf(a.privateKey, a.publicKey)) {
+            assertFalse(key.toHexKey().take(8) in text.lowercase(), text)
+            assertFalse(key.contentToString() in text, text)
         }
     }
 
