@@ -28,6 +28,7 @@ import kotlinx.cinterop.usePinned
 import platform.linux.SYS_getrandom
 import platform.posix.EINTR
 import platform.posix.ENOSYS
+import platform.posix.EPERM
 import platform.posix.O_CLOEXEC
 import platform.posix.O_RDONLY
 import platform.posix.close
@@ -36,17 +37,21 @@ import platform.posix.open
 import platform.posix.read
 import platform.posix.size_t
 import platform.posix.syscall
+import kotlin.concurrent.Volatile
 
 /**
  * `getrandom(2)` with no flags: it blocks only until the kernel's pool is first seeded,
  * and after that fails only when a signal interrupts it. Called through `syscall`
  * because the glibc Kotlin/Native links against predates the `getrandom` wrapper.
- * Kernels without the call (before 3.17) fall back to reading `/dev/urandom`.
+ * Where the call is missing (`ENOSYS`, kernels before 3.17) or a seccomp filter refuses it
+ * (`EPERM`, some older container profiles), this falls back to `/dev/urandom`, and keeps
+ * using it: the answer won't change for this process.
  */
 @OptIn(ExperimentalForeignApi::class)
 internal actual fun fillSecureRandom(output: ByteArray) {
     if (output.isEmpty()) return
     output.usePinned { pinned ->
+        if (getrandomUnavailable) return readUrandom(pinned, 0, output.size)
         var filled = 0
         while (filled < output.size) {
             val result = syscall(SYS_getrandom.convert(), pinned.addressOf(filled), (output.size - filled).convert<size_t>(), 0u)
@@ -57,14 +62,21 @@ internal actual fun fillSecureRandom(output: ByteArray) {
             }
             when (val error = errno) {
                 EINTR -> continue
-                ENOSYS -> return readUrandom(pinned, filled, output.size)
+                ENOSYS, EPERM -> {
+                    getrandomUnavailable = true
+                    return readUrandom(pinned, filled, output.size)
+                }
                 else -> throw IllegalStateException("getrandom failed with errno $error")
             }
         }
     }
 }
 
-/** Fills `pinned[from until to]` from `/dev/urandom`, for kernels without `getrandom`. */
+/** Set once `getrandom` is known not to work here, so later calls skip straight to `/dev/urandom`. */
+@Volatile
+private var getrandomUnavailable = false
+
+/** Fills `pinned[from until to]` from `/dev/urandom`, where `getrandom` is unavailable. */
 @OptIn(ExperimentalForeignApi::class)
 private fun readUrandom(
     pinned: Pinned<ByteArray>,
