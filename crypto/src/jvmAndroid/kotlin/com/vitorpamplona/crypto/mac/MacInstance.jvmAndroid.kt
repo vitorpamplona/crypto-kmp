@@ -20,21 +20,31 @@
  */
 package com.vitorpamplona.crypto.mac
 
+import java.security.NoSuchAlgorithmException
 import javax.crypto.Mac
 
+/** HMAC on JCA's `Mac`. */
 actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    val mac: Mac =
-        Mac.getInstance(algorithm).apply {
-            init(FixedKey(key, algorithm))
-        }
+    private var algorithm = HmacAlgorithm.of(algorithm)
+    private var mac: Mac = newMac(this.algorithm, key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
-    ) = mac.init(FixedKey(key, algorithm))
+    ) {
+        val requested = HmacAlgorithm.of(algorithm)
+        // A JCA Mac keeps the algorithm it was made with whatever the key says, so a
+        // different algorithm needs a new one.
+        if (requested == this.algorithm) {
+            mac.init(FixedKey(key, requested.jcaName))
+        } else {
+            mac = newMac(requested, key)
+            this.algorithm = requested
+        }
+    }
 
     actual fun getMacLength() = mac.macLength
 
@@ -42,10 +52,29 @@ actual class MacInstance actual constructor(
 
     actual fun update(byte: Byte) = mac.update(byte)
 
-    actual fun doFinal() = mac.doFinal()
+    actual fun doFinal(): ByteArray = mac.doFinal()
 
     actual fun doFinal(
         output: ByteArray,
         offset: Int,
-    ) = mac.doFinal(output, offset)
+    ) {
+        // JCA would throw ShortBufferException; checked here to throw what the other platforms do.
+        val macLength = mac.macLength
+        require(offset >= 0 && macLength <= output.size - offset) { "no room for a $macLength-byte MAC" }
+        mac.doFinal(output, offset)
+    }
+
+    private fun newMac(
+        algorithm: HmacAlgorithm,
+        key: ByteArray,
+    ): Mac {
+        val mac =
+            try {
+                Mac.getInstance(algorithm.jcaName)
+            } catch (e: NoSuchAlgorithmException) {
+                throw IllegalArgumentException("Unsupported MAC algorithm: ${algorithm.jcaName}", e)
+            }
+        mac.init(FixedKey(key, algorithm.jcaName))
+        return mac
+    }
 }

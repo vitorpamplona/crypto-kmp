@@ -20,26 +20,24 @@
  */
 package com.vitorpamplona.crypto.mac
 
-import com.vitorpamplona.crypto.sha2.Sha256Digest
-import com.vitorpamplona.crypto.sha2.Sha512Digest
-
 actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    private var algorithm = algorithm
-    private var hmac = Hmac(digestForAlgorithm(algorithm), key)
+    private var algorithm = HmacAlgorithm.of(algorithm)
+    private var hmac = Hmac(this.algorithm.newDigest(), key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
+        val requested = HmacAlgorithm.of(algorithm)
         // Same algorithm: rekey in place, which skips reallocating the digests.
-        if (algorithm == this.algorithm) {
+        if (requested == this.algorithm) {
             hmac.rekey(key)
         } else {
-            hmac = Hmac(digestForAlgorithm(algorithm), key)
-            this.algorithm = algorithm
+            hmac = Hmac(requested.newDigest(), key)
+            this.algorithm = requested
         }
     }
 
@@ -61,11 +59,4 @@ actual class MacInstance actual constructor(
     ) {
         hmac.doFinal(output, offset)
     }
-
-    private fun digestForAlgorithm(algorithm: String) =
-        when (algorithm) {
-            "HmacSHA256" -> Sha256Digest()
-            "HmacSHA512" -> Sha512Digest()
-            else -> error("Algorithm is not yet supported.")
-        }
 }

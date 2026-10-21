@@ -28,19 +28,38 @@ import kotlinx.cinterop.convert
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.rawValue
+import kotlinx.cinterop.sizeOf
 import kotlinx.cinterop.usePinned
 import platform.CoreCrypto.CCHmacAlgorithm
 import platform.CoreCrypto.CCHmacContext
 import platform.CoreCrypto.CCHmacFinal
 import platform.CoreCrypto.CCHmacInit
 import platform.CoreCrypto.CCHmacUpdate
-import platform.CoreCrypto.CC_SHA256_DIGEST_LENGTH
-import platform.CoreCrypto.CC_SHA512_DIGEST_LENGTH
+import platform.CoreCrypto.kCCHmacAlgSHA1
 import platform.CoreCrypto.kCCHmacAlgSHA256
 import platform.CoreCrypto.kCCHmacAlgSHA512
+import platform.posix.memset
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.ref.Cleaner
 import kotlin.native.ref.createCleaner
+
+/**
+ * The secrets a [MacInstance] holds: the keyed CCHmac context, and the key, kept because
+ * CCHmacFinal consumes the keyed state and only CCHmacInit can re-arm it. A separate
+ * object so the cleaner can wipe both without holding on to the [MacInstance].
+ */
+@OptIn(ExperimentalForeignApi::class)
+private class HmacSecrets {
+    val context: CPointer<CCHmacContext> = nativeHeap.alloc<CCHmacContext>().ptr
+    var key: ByteArray = ByteArray(0)
+
+    /** Wipes the key and the context and frees the context. Runs once, from the cleaner. */
+    fun destroy() {
+        key.fill(0)
+        memset(context, 0, sizeOf<CCHmacContext>().convert())
+        nativeHeap.free(context.rawValue)
+    }
+}
 
 /** HMAC on CommonCrypto's CCHmac. Like JCA's `Mac`, [doFinal] leaves it keyed for the next message. */
 @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
@@ -48,19 +67,18 @@ actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    // The context lives on the native heap; the cleaner frees it with this object.
-    private val context: CPointer<CCHmacContext> = nativeHeap.alloc<CCHmacContext>().ptr
+    // Resolved before anything is allocated, so an unknown name throws with nothing to clean up.
+    private var hmacAlgorithm: HmacAlgorithm = HmacAlgorithm.of(algorithm)
+    private var ccAlgorithm: CCHmacAlgorithm = ccAlgorithmFor(hmacAlgorithm)
+
+    // Native memory and the key: the cleaner wipes and frees them with this object.
+    private val secrets = HmacSecrets()
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
-
-    private var ccAlgorithm: CCHmacAlgorithm = ccAlgorithmFor(algorithm)
-    private var macLength: Int = macLengthFor(algorithm)
-
-    // CCHmacFinal consumes the keyed state, so the key is kept to re-arm it.
-    private var key: ByteArray = key.copyOf()
+    private val cleaner: Cleaner = createCleaner(secrets) { it.destroy() }
 
     init {
+        secrets.key = key.copyOf()
         rearm()
     }
 
@@ -68,51 +86,49 @@ actual class MacInstance actual constructor(
         key: ByteArray,
         algorithm: String,
     ) {
-        ccAlgorithm = ccAlgorithmFor(algorithm)
-        macLength = macLengthFor(algorithm)
-        this.key = key.copyOf()
+        val requested = HmacAlgorithm.of(algorithm)
+        hmacAlgorithm = requested
+        ccAlgorithm = ccAlgorithmFor(requested)
+        secrets.key.fill(0)
+        secrets.key = key.copyOf()
         rearm()
     }
 
-    actual fun getMacLength(): Int = macLength
+    actual fun getMacLength(): Int = hmacAlgorithm.macLength
 
     actual fun update(array: ByteArray) {
         if (array.isEmpty()) return
-        array.usePinned { CCHmacUpdate(context, it.addressOf(0), array.size.convert()) }
+        array.usePinned { CCHmacUpdate(secrets.context, it.addressOf(0), array.size.convert()) }
     }
 
     actual fun update(byte: Byte) = update(byteArrayOf(byte))
 
-    actual fun doFinal(): ByteArray = ByteArray(macLength).also { doFinal(it, 0) }
+    actual fun doFinal(): ByteArray = ByteArray(getMacLength()).also { doFinal(it, 0) }
 
     actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {
+        val macLength = getMacLength()
         require(offset >= 0 && macLength <= output.size - offset) { "no room for a $macLength-byte MAC" }
-        output.usePinned { CCHmacFinal(context, it.addressOf(offset)) }
+        output.usePinned { CCHmacFinal(secrets.context, it.addressOf(offset)) }
         rearm()
     }
 
     private fun rearm() {
+        val key = secrets.key
         if (key.isEmpty()) {
-            CCHmacInit(context, ccAlgorithm, null, 0.convert())
+            // addressOf(0) throws on an empty array; CCHmacInit takes null for a 0-byte key.
+            CCHmacInit(secrets.context, ccAlgorithm, null, 0.convert())
         } else {
-            key.usePinned { CCHmacInit(context, ccAlgorithm, it.addressOf(0), key.size.convert()) }
+            key.usePinned { CCHmacInit(secrets.context, ccAlgorithm, it.addressOf(0), key.size.convert()) }
         }
     }
 
-    private fun ccAlgorithmFor(algorithm: String): CCHmacAlgorithm =
+    private fun ccAlgorithmFor(algorithm: HmacAlgorithm): CCHmacAlgorithm =
         when (algorithm) {
-            "HmacSHA256" -> kCCHmacAlgSHA256
-            "HmacSHA512" -> kCCHmacAlgSHA512
-            else -> error("Algorithm is not yet supported.")
-        }
-
-    private fun macLengthFor(algorithm: String): Int =
-        when (algorithm) {
-            "HmacSHA256" -> CC_SHA256_DIGEST_LENGTH
-            "HmacSHA512" -> CC_SHA512_DIGEST_LENGTH
-            else -> error("Algorithm is not yet supported.")
+            HmacAlgorithm.HMAC_SHA1 -> kCCHmacAlgSHA1
+            HmacAlgorithm.HMAC_SHA256 -> kCCHmacAlgSHA256
+            HmacAlgorithm.HMAC_SHA512 -> kCCHmacAlgSHA512
         }
 }
