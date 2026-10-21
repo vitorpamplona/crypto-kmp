@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.crypto.sha2
 
-import com.vitorpamplona.crypto.sha2.Sha256Compression
-
-// Straight on the block function: sha256 is on the event-id path, and a digest object
-// would cost allocations and a reset nobody needs.
+// Straight on the block function: sha256 is on hot paths, and a digest object would cost
+// allocations and a reset nobody needs.
 actual fun sha256(data: ByteArray): ByteArray = ByteArray(32).also { Sha256Compression.hash(data, 0, data.size, it) }
 
 actual fun sha256Into(
@@ -31,6 +29,7 @@ actual fun sha256Into(
     data: ByteArray,
     len: Int,
 ): ByteArray {
+    checkSha256IntoArgs(out, data, len)
     // Hashes data[0, len) straight into out: no slice copy, no temporary digest.
     Sha256Compression.hash(data, 0, len, out)
     return out

@@ -20,20 +20,17 @@
  */
 package com.vitorpamplona.crypto.sha2
 
-import com.vitorpamplona.crypto.sha2.Sha256Compression
-
 /**
- * SHA-256 split at a block boundary, so a miner hashes only the part of the
- * message it changes.
+ * SHA-256 split at a block boundary, so a search over many variants of one message
+ * (a proof-of-work search, say) hashes only the part of the message it changes.
  *
  * SHA-256 eats the message in 64-byte blocks, and the state after a block depends
- * only on the blocks before it. When the nonce starts at [changesFrom], every
- * block before the one holding it is the same for every candidate: they are
+ * only on the blocks before it. When the variable bytes start at [changesFrom], every
+ * block before the one holding them is the same for every candidate: they are
  * compressed once, here, into [midstate]. A candidate then costs only the blocks
- * from the nonce's block to the end, padding included, instead of the whole
- * serialized event.
+ * from that block to the end, padding included, instead of the whole message.
  *
- * The miner writes candidates straight into [tail], which holds the message from
+ * The caller writes candidates straight into [tail], which holds the message from
  * [prefixLength] on with the SHA-256 padding already appended: byte `i` of the
  * message is `tail[i - prefixLength]`.
  *
@@ -89,9 +86,12 @@ class Sha256Midstate(
     /**
      * True when the digest of the current [tail] starts with at least [minBits]
      * zero bits. Reads the state words directly: the digest is those words in
-     * big-endian order, so no 32-byte digest is ever materialized.
+     * big-endian order, so no 32-byte digest is ever materialized. A 256-bit digest
+     * never has more than 256 leading zeros, so anything above 256 is false.
      */
     fun hasLeadingZeroBits(minBits: Int): Boolean {
+        require(minBits >= 0) { "minBits must not be negative, was $minBits" }
+        if (minBits > 256) return false
         hashTail()
         val s = state
         var needed = minBits
@@ -108,6 +108,7 @@ class Sha256Midstate(
 
     /** Writes the 32-byte digest of the current [tail] into [out]. */
     fun digestInto(out: ByteArray): ByteArray {
+        require(out.size >= 32) { "out must hold a 32-byte digest, was ${out.size} bytes" }
         hashTail()
         for (i in 0 until 8) {
             val word = state[i]
