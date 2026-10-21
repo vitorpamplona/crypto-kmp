@@ -20,12 +20,18 @@
  */
 package com.vitorpamplona.crypto.chacha
 
+/*
+ * The limb layout, multiply and final reduction follow the 32-bit poly1305-donna
+ * (poly1305-donna-32.h, https://github.com/floodyberry/poly1305-donna) by Andrew Moon,
+ * released into the public domain or, where that is not recognised, under the MIT license.
+ */
+
 /**
  * Pure Kotlin implementation of Poly1305 one-time authenticator (RFC 8439 §2.5).
  *
- * Uses 130-bit arithmetic with 5 limbs of 26 bits each, following the approach
- * from D.J. Bernstein's reference implementation. All functions are stateless
- * and thread-safe.
+ * Uses 130-bit arithmetic with 5 limbs of 26 bits each, following Andrew Moon's
+ * poly1305-donna-32. The final reduction and the choice between h and h - p are masked,
+ * not branched. All functions are stateless and thread-safe.
  *
  * The 32-byte key is split into:
  * - r (first 16 bytes): clamped per spec, used as the multiplier
@@ -38,109 +44,113 @@ object Poly1305 {
      * @param message the data to authenticate
      * @param key 32-byte one-time key (r || s)
      * @return 16-byte authentication tag
+     * @throws IllegalArgumentException if [key] is not 32 bytes
      */
     fun mac(
         message: ByteArray,
         key: ByteArray,
     ): ByteArray {
-        // Parse and clamp r from first 16 bytes of key
-        val r0 = (key.leToLong(0)) and 0x3ffffff
-        val r1 = (key.leToLong(3) ushr 2) and 0x3ffff03
-        val r2 = (key.leToLong(6) ushr 4) and 0x3ffc0ff
-        val r3 = (key.leToLong(9) ushr 6) and 0x3f03fff
-        val r4 = (key.leToLong(12) ushr 8) and 0x00fffff
+        val state = Poly1305State(key)
+        state.update(message)
+        return state.finish()
+    }
+}
 
-        // Precompute 5*r for the reduction step
-        val s1 = r1 * 5
-        val s2 = r2 * 5
-        val s3 = r3 * 5
-        val s4 = r4 * 5
+/**
+ * Incremental Poly1305: [update] as often as needed, then [finish] once. [finish] wipes the
+ * key and the accumulator, so a state makes one tag.
+ */
+internal class Poly1305State(
+    key: ByteArray,
+) {
+    // Clamped r, and 5*r for the reduction step
+    private var r0: Long
+    private var r1: Long
+    private var r2: Long
+    private var r3: Long
+    private var r4: Long
+    private var s1: Long
+    private var s2: Long
+    private var s3: Long
+    private var s4: Long
 
-        // Accumulator: 5 limbs of 26 bits
-        var h0 = 0L
-        var h1 = 0L
-        var h2 = 0L
-        var h3 = 0L
-        var h4 = 0L
+    // s, the second half of the key
+    private var pad0: Long
+    private var pad1: Long
+    private var pad2: Long
+    private var pad3: Long
 
-        val fullBlocks = message.size / 16
-        val remainder = message.size % 16
+    // Accumulator: 5 limbs of 26 bits
+    private var h0 = 0L
+    private var h1 = 0L
+    private var h2 = 0L
+    private var h3 = 0L
+    private var h4 = 0L
 
-        // Process full 16-byte blocks
-        for (i in 0 until fullBlocks) {
-            val offset = i * 16
-            h0 += (message.leToLong(offset)) and 0x3ffffff
-            h1 += (message.leToLong(offset + 3) ushr 2) and 0x3ffffff
-            h2 += (message.leToLong(offset + 6) ushr 4) and 0x3ffffff
-            h3 += (message.leToLong(offset + 9) ushr 6) and 0x3ffffff
-            h4 += (message.leToLong(offset + 12) ushr 8) or (1L shl 24) // hibit = 1
+    // A partial block waiting for more input
+    private val buffer = ByteArray(16)
+    private var buffered = 0
 
-            // Multiply and reduce
-            val d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1
-            val d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2
-            val d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3
-            val d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4
-            val d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0
+    init {
+        require(key.size == 32) { "Poly1305 key must be 32 bytes, was ${key.size}" }
+        r0 = (key.littleEndianToLong(0)) and 0x3ffffff
+        r1 = (key.littleEndianToLong(3) ushr 2) and 0x3ffff03
+        r2 = (key.littleEndianToLong(6) ushr 4) and 0x3ffc0ff
+        r3 = (key.littleEndianToLong(9) ushr 6) and 0x3f03fff
+        r4 = (key.littleEndianToLong(12) ushr 8) and 0x00fffff
+        s1 = r1 * 5
+        s2 = r2 * 5
+        s3 = r3 * 5
+        s4 = r4 * 5
+        pad0 = key.littleEndianToLong(16)
+        pad1 = key.littleEndianToLong(20)
+        pad2 = key.littleEndianToLong(24)
+        pad3 = key.littleEndianToLong(28)
+    }
 
-            // Partial reduction mod 2^130 - 5
-            var c: Long
-            c = d0 ushr 26
-            h0 = d0 and 0x3ffffff
-            h1 = d1 + c
-            c = h1 ushr 26
-            h1 = h1 and 0x3ffffff
-            h2 = d2 + c
-            c = h2 ushr 26
-            h2 = h2 and 0x3ffffff
-            h3 = d3 + c
-            c = h3 ushr 26
-            h3 = h3 and 0x3ffffff
-            h4 = d4 + c
-            c = h4 ushr 26
-            h4 = h4 and 0x3ffffff
-            h0 += c * 5
-            c = h0 ushr 26
-            h0 = h0 and 0x3ffffff
-            h1 += c
+    fun update(
+        data: ByteArray,
+        offset: Int = 0,
+        length: Int = data.size - offset,
+    ) {
+        var pos = offset
+        var remaining = length
+        if (buffered > 0) {
+            val take = minOf(16 - buffered, remaining)
+            data.copyInto(buffer, buffered, pos, pos + take)
+            buffered += take
+            pos += take
+            remaining -= take
+            if (buffered < 16) return
+            block(buffer, 0, FULL_BLOCK)
+            buffered = 0
         }
+        while (remaining >= 16) {
+            block(data, pos, FULL_BLOCK)
+            pos += 16
+            remaining -= 16
+        }
+        if (remaining > 0) {
+            data.copyInto(buffer, 0, pos, pos + remaining)
+            buffered = remaining
+        }
+    }
 
-        // Process remaining bytes (if any)
-        if (remainder > 0) {
-            val block = ByteArray(17)
-            message.copyInto(block, 0, fullBlocks * 16, message.size)
-            block[remainder] = 1 // pad with 0x01
+    /** Zero-pads the input so far to a multiple of 16 bytes: RFC 8439's pad16. */
+    fun padToBlock() {
+        if (buffered == 0) return
+        buffer.fill(0, buffered, 16)
+        block(buffer, 0, FULL_BLOCK)
+        buffered = 0
+    }
 
-            h0 += (block.leToLong(0)) and 0x3ffffff
-            h1 += (block.leToLong(3) ushr 2) and 0x3ffffff
-            h2 += (block.leToLong(6) ushr 4) and 0x3ffffff
-            h3 += (block.leToLong(9) ushr 6) and 0x3ffffff
-            h4 += (block.leToLong(12) ushr 8)
-
-            val d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1
-            val d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2
-            val d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3
-            val d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4
-            val d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0
-
-            var c: Long
-            c = d0 ushr 26
-            h0 = d0 and 0x3ffffff
-            h1 = d1 + c
-            c = h1 ushr 26
-            h1 = h1 and 0x3ffffff
-            h2 = d2 + c
-            c = h2 ushr 26
-            h2 = h2 and 0x3ffffff
-            h3 = d3 + c
-            c = h3 ushr 26
-            h3 = h3 and 0x3ffffff
-            h4 = d4 + c
-            c = h4 ushr 26
-            h4 = h4 and 0x3ffffff
-            h0 += c * 5
-            c = h0 ushr 26
-            h0 = h0 and 0x3ffffff
-            h1 += c
+    /** Returns the 16-byte tag and wipes the state. */
+    fun finish(): ByteArray {
+        // Process remaining bytes (if any): pad with 0x01, and no 2^128 bit
+        if (buffered > 0) {
+            buffer[buffered] = 1
+            buffer.fill(0, buffered + 1, 16)
+            block(buffer, 0, 0L)
         }
 
         // Final reduction: fully carry and reduce mod 2^130 - 5
@@ -197,50 +207,97 @@ object Poly1305 {
         var f3 = ((h3 ushr 18) or (h4 shl 8)) and 0xffffffffL
 
         // Add s (second half of the key)
-        val s0 = key.leToUInt(16)
-        val s1Long = key.leToUInt(20)
-        val s2Long = key.leToUInt(24)
-        val s3Long = key.leToUInt(28)
-
-        f0 += s0
+        f0 += pad0
         c = f0 ushr 32
-        f1 += s1Long + c
+        f1 += pad1 + c
         c = f1 ushr 32
-        f2 += s2Long + c
+        f2 += pad2 + c
         c = f2 ushr 32
-        f3 += s3Long + c
+        f3 += pad3 + c
 
         // Output as little-endian bytes
         val tag = ByteArray(16)
-        tag[0] = (f0).toByte()
-        tag[1] = (f0 ushr 8).toByte()
-        tag[2] = (f0 ushr 16).toByte()
-        tag[3] = (f0 ushr 24).toByte()
-        tag[4] = (f1).toByte()
-        tag[5] = (f1 ushr 8).toByte()
-        tag[6] = (f1 ushr 16).toByte()
-        tag[7] = (f1 ushr 24).toByte()
-        tag[8] = (f2).toByte()
-        tag[9] = (f2 ushr 8).toByte()
-        tag[10] = (f2 ushr 16).toByte()
-        tag[11] = (f2 ushr 24).toByte()
-        tag[12] = (f3).toByte()
-        tag[13] = (f3 ushr 8).toByte()
-        tag[14] = (f3 ushr 16).toByte()
-        tag[15] = (f3 ushr 24).toByte()
+        f0.toInt().intToLittleEndian(tag, 0)
+        f1.toInt().intToLittleEndian(tag, 4)
+        f2.toInt().intToLittleEndian(tag, 8)
+        f3.toInt().intToLittleEndian(tag, 12)
+
+        wipe()
         return tag
+    }
+
+    /** Absorbs the 16 bytes at [offset]; [hibit] is the 2^128 bit, as it sits in limb 4. */
+    private fun block(
+        message: ByteArray,
+        offset: Int,
+        hibit: Long,
+    ) {
+        h0 += (message.littleEndianToLong(offset)) and 0x3ffffff
+        h1 += (message.littleEndianToLong(offset + 3) ushr 2) and 0x3ffffff
+        h2 += (message.littleEndianToLong(offset + 6) ushr 4) and 0x3ffffff
+        h3 += (message.littleEndianToLong(offset + 9) ushr 6) and 0x3ffffff
+        h4 += (message.littleEndianToLong(offset + 12) ushr 8) or hibit
+
+        // Multiply and reduce
+        val d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1
+        val d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2
+        val d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3
+        val d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4
+        val d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0
+
+        // Partial reduction mod 2^130 - 5
+        var c: Long
+        c = d0 ushr 26
+        h0 = d0 and 0x3ffffff
+        h1 = d1 + c
+        c = h1 ushr 26
+        h1 = h1 and 0x3ffffff
+        h2 = d2 + c
+        c = h2 ushr 26
+        h2 = h2 and 0x3ffffff
+        h3 = d3 + c
+        c = h3 ushr 26
+        h3 = h3 and 0x3ffffff
+        h4 = d4 + c
+        c = h4 ushr 26
+        h4 = h4 and 0x3ffffff
+        h0 += c * 5
+        c = h0 ushr 26
+        h0 = h0 and 0x3ffffff
+        h1 += c
+    }
+
+    private fun wipe() {
+        r0 = 0
+        r1 = 0
+        r2 = 0
+        r3 = 0
+        r4 = 0
+        s1 = 0
+        s2 = 0
+        s3 = 0
+        s4 = 0
+        pad0 = 0
+        pad1 = 0
+        pad2 = 0
+        pad3 = 0
+        h0 = 0
+        h1 = 0
+        h2 = 0
+        h3 = 0
+        h4 = 0
+        buffer.fill(0)
+        buffered = 0
+    }
+
+    private companion object {
+        /** The 2^128 bit every full 16-byte block carries (RFC 8439 §2.5.1), in limb 4. */
+        const val FULL_BLOCK = 1L shl 24
     }
 }
 
 /** Read 4 bytes as unsigned little-endian Long starting at [offset]. */
-private fun ByteArray.leToUInt(offset: Int): Long =
-    (this[offset].toLong() and 0xFF) or
-        ((this[offset + 1].toLong() and 0xFF) shl 8) or
-        ((this[offset + 2].toLong() and 0xFF) shl 16) or
-        ((this[offset + 3].toLong() and 0xFF) shl 24)
-
-/** Read 4 bytes as unsigned little-endian Long starting at [offset]. Used for Poly1305 limb loading. */
-private fun ByteArray.leToLong(offset: Int): Long =
+private fun ByteArray.littleEndianToLong(offset: Int): Long =
     (this[offset].toLong() and 0xFF) or
         ((this[offset + 1].toLong() and 0xFF) shl 8) or
         ((this[offset + 2].toLong() and 0xFF) shl 16) or
