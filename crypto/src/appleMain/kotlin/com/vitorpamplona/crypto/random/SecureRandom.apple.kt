@@ -25,84 +25,12 @@ import kotlinx.cinterop.refTo
 import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
 
-actual class SecureRandom {
-    actual fun nextInt(): Int {
-        val bytes = ByteArray(4)
-        nextBytes(bytes)
-        return ((bytes[0].toInt() and 0xFF) shl 24) or
-            ((bytes[1].toInt() and 0xFF) shl 16) or
-            ((bytes[2].toInt() and 0xFF) shl 8) or
-            (bytes[3].toInt() and 0xFF)
-    }
-
-    actual fun nextInt(bound: Int): Int {
-        require(bound > 0) { throw IllegalArgumentException("Bad Bound $bound") }
-
-        var intValue = nextPositiveInt()
-
-        val m = bound - 1
-        if ((bound and m) == 0) {
-            // i.e., bound is a power of 2
-            intValue = ((bound * intValue.toLong()) shr 31).toInt()
-        } else { // reject over-represented candidates
-            var u: Int = intValue
-            intValue = u % bound
-            while (u - intValue + m < 0) {
-                u = nextPositiveInt()
-                intValue = u % bound
-            }
-        }
-
-        return intValue
-    }
-
-    actual fun nextLong(): Long {
-        val bytes = ByteArray(8)
-        nextBytes(bytes)
-        return ((bytes[0].toLong() and 0xFFL) shl 56) or
-            ((bytes[1].toLong() and 0xFFL) shl 48) or
-            ((bytes[2].toLong() and 0xFFL) shl 40) or
-            ((bytes[3].toLong() and 0xFFL) shl 32) or
-            ((bytes[4].toLong() and 0xFFL) shl 24) or
-            ((bytes[5].toLong() and 0xFFL) shl 16) or
-            ((bytes[6].toLong() and 0xFFL) shl 8) or
-            (bytes[7].toLong() and 0xFFL)
-    }
-
-    actual fun nextLong(bound: Long): Long {
-        require(bound > 0) { throw IllegalArgumentException("Bad Bound $bound") }
-
-        if (bound < Int.MAX_VALUE) {
-            return nextInt(bound.toInt()).toLong()
-        }
-
-        return nextPositiveLong() % bound
-    }
-
-    fun nextPositiveInt(): Int {
-        val value = nextInt()
-        return if (value > 0) {
-            value
-        } else {
-            -value
-        }
-    }
-
-    fun nextPositiveLong(): Long {
-        val value = nextLong()
-        return if (value > 0) {
-            value
-        } else {
-            -value
-        }
-    }
-
-    @OptIn(ExperimentalForeignApi::class)
-    actual fun nextBytes(output: ByteArray) {
-        val status = SecRandomCopyBytes(kSecRandomDefault, output.size.toULong(), output.refTo(0))
-        if (status != 0) {
-            // Handle error, e.g., throw an exception
-            throw IllegalStateException("Failed to generate secure random bytes: $status")
-        }
+@OptIn(ExperimentalForeignApi::class)
+internal actual fun fillSecureRandom(output: ByteArray) {
+    // refTo(0) throws on an empty array, and there is nothing to fill anyway.
+    if (output.isEmpty()) return
+    val status = SecRandomCopyBytes(kSecRandomDefault, output.size.toULong(), output.refTo(0))
+    if (status != 0) {
+        throw IllegalStateException("Failed to generate secure random bytes: $status")
     }
 }

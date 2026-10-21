@@ -46,13 +46,16 @@ object RandomInstance {
     fun long(bound: Long) = randomizer.nextLong(bound)
 
     /** [size] secure random bytes — the go-to for nonces, keys and salts. */
-    fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
+    fun bytes(size: Int): ByteArray {
+        require(size >= 0) { "size must not be negative, was $size" }
+        return ByteArray(size).also { randomizer.nextBytes(it) }
+    }
 
     val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
     /** A single secure random alphanumeric char from [charPool]. */
     fun randomChar() = charPool[randomizer.nextInt(charPool.size)]
 
-    /** A secure random alphanumeric string of [size] chars — handy for subscription ids. */
+    /** A secure random alphanumeric string of [size] chars — handy for random ids. */
     fun randomChars(size: Int = 16) = CharArray(size) { randomChar() }.concatToString()
 }
