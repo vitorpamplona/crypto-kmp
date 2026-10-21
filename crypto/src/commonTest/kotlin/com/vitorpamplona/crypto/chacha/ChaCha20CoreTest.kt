@@ -21,26 +21,26 @@
 package com.vitorpamplona.crypto.chacha
 
 import com.vitorpamplona.crypto.hexToByteArray
-import com.vitorpamplona.crypto.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
- * Test vectors from RFC 8439, XChaCha20 draft (draft-irtf-cfrg-xchacha-03),
- * and libsodium test suite.
+ * Test vectors from RFC 8439 and the XChaCha20 draft (draft-irtf-cfrg-xchacha-03), plus
+ * the size checks and the 32-bit block counter limit of the low-level functions.
  */
 class ChaCha20CoreTest {
     private fun hex(s: String): ByteArray = s.replace(" ", "").hexToByteArray()
 
-    private fun ByteArray.toHex(): String = toHexKey()
+    private val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+    private val nonce = hex("000000090000004a00000000")
+    private val xNonce = hex("000102030405060708090a0b0c0d0e0f1011121314151617")
 
     // ===== RFC 8439 §2.3.2: ChaCha20 Block Function Test Vector =====
     @Test
     fun testChaCha20Block_RFC8439() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000000090000004a00000000")
         val counter = 1
 
         val block = ChaCha20Core.chaCha20Block(key, counter, nonce)
@@ -58,7 +58,6 @@ class ChaCha20CoreTest {
     // ===== RFC 8439 §2.4.2: ChaCha20 Encryption Test Vector =====
     @Test
     fun testChaCha20Encrypt_RFC8439() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
         val nonce = hex("000000000000004a00000000")
         val counter = 1
         val plaintext =
@@ -94,25 +93,20 @@ class ChaCha20CoreTest {
         assertContentEquals(expected, tag)
     }
 
-    // ===== RFC 8439 §2.8.2: AEAD ChaCha20-Poly1305 Test Vector =====
-    // Adapted for XChaCha20 via the XChaCha20 draft test vector
+    // ===== RFC 8439 §2.6.2: Poly1305 Key Generation =====
     @Test
     fun testPoly1305KeyGeneration_RFC8439() {
-        // RFC 8439 §2.6.2 Poly1305 Key Generation
         val key = hex("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
         val nonce = hex("000000000001020304050607")
 
-        val block = ChaCha20Core.chaCha20Block(key, 0, nonce)
-        val polyKey = block.copyOfRange(0, 32)
-
         val expected = hex("8ad5a08b905f81cc815040274ab29471a833b637e3fd0da508dbb8e2fdd1a646")
-        assertContentEquals(expected, polyKey)
+        assertContentEquals(expected, ChaCha20Core.chaCha20Block(key, 0, nonce).copyOfRange(0, 32))
+        assertContentEquals(expected, ChaCha20Core.chaCha20PolyKey(key, nonce))
     }
 
     // ===== XChaCha20 draft §2.2.1: HChaCha20 Test Vector =====
     @Test
     fun testHChaCha20_Draft() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
         val input = hex("000000090000004a0000000031415927")
 
         val subKey = ChaCha20Core.hChaCha20(key, input)
@@ -121,116 +115,9 @@ class ChaCha20CoreTest {
         assertContentEquals(expected, subKey)
     }
 
-    // ===== XChaCha20 draft §A.3.1: XChaCha20-Poly1305 AEAD Test Vector =====
-    @Test
-    fun testXChaCha20Poly1305Encrypt_Draft() {
-        val key = hex("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
-        val nonce = hex("404142434445464748494a4b4c4d4e4f5051525354555657")
-        val ad = hex("50515253c0c1c2c3c4c5c6c7")
-        val plaintext =
-            "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it."
-                .encodeToByteArray()
-
-        val result = XChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-
-        // Ciphertext portion
-        val expectedCiphertext =
-            hex(
-                "bd6d179d3e83d43b9576579493c0e939572a1700252bfaccbed2902c21396cbb" +
-                    "731c7f1b0b4aa6440bf3a82f4eda7e39ae64c6708c54c216cb96b72e1213b452" +
-                    "2f8c9ba40db5d945b11b69b982c1bb9e3f3fac2bc369488f76b2383565d3fff9" +
-                    "21f9664c97637da9768812f615c68b13b52e",
-            )
-        // Tag portion
-        val expectedTag = hex("c0875924c1c7987947deafd8780acf49")
-
-        val ciphertext = result.copyOfRange(0, result.size - 16)
-        val tag = result.copyOfRange(result.size - 16, result.size)
-
-        assertContentEquals(expectedCiphertext, ciphertext)
-        assertContentEquals(expectedTag, tag)
-    }
-
-    @Test
-    fun testXChaCha20Poly1305Decrypt_Draft() {
-        val key = hex("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
-        val nonce = hex("404142434445464748494a4b4c4d4e4f5051525354555657")
-        val ad = hex("50515253c0c1c2c3c4c5c6c7")
-        val ciphertextWithTag =
-            hex(
-                "bd6d179d3e83d43b9576579493c0e939572a1700252bfaccbed2902c21396cbb" +
-                    "731c7f1b0b4aa6440bf3a82f4eda7e39ae64c6708c54c216cb96b72e1213b452" +
-                    "2f8c9ba40db5d945b11b69b982c1bb9e3f3fac2bc369488f76b2383565d3fff9" +
-                    "21f9664c97637da9768812f615c68b13b52e" +
-                    "c0875924c1c7987947deafd8780acf49",
-            )
-
-        val plaintext = XChaCha20Poly1305.decrypt(ciphertextWithTag, ad, nonce, key)
-
-        val expected =
-            "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it."
-        assertEquals(expected, plaintext.decodeToString())
-    }
-
-    @Test
-    fun testXChaCha20Poly1305_TamperedCiphertext() {
-        val key = hex("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
-        val nonce = hex("404142434445464748494a4b4c4d4e4f5051525354555657")
-        val ad = hex("50515253c0c1c2c3c4c5c6c7")
-        val plaintext = "Test message".encodeToByteArray()
-
-        val encrypted = XChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-        // Flip a bit in the ciphertext
-        encrypted[0] = (encrypted[0].toInt() xor 1).toByte()
-
-        assertFailsWith<IllegalStateException> {
-            XChaCha20Poly1305.decrypt(encrypted, ad, nonce, key)
-        }
-    }
-
-    @Test
-    fun testXChaCha20Poly1305_RoundTrip() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000102030405060708090a0b0c0d0e0f1011121314151617")
-        val ad = hex("feedfacedeadbeef")
-        val plaintext = "Hello, Nostr! This is a round-trip test.".encodeToByteArray()
-
-        val encrypted = XChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-        val decrypted = XChaCha20Poly1305.decrypt(encrypted, ad, nonce, key)
-
-        assertContentEquals(plaintext, decrypted)
-    }
-
-    @Test
-    fun testXChaCha20Poly1305_EmptyPlaintext() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000102030405060708090a0b0c0d0e0f1011121314151617")
-        val ad = hex("feedface")
-        val plaintext = ByteArray(0)
-
-        val encrypted = XChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-        assertEquals(16, encrypted.size) // Just the tag
-        val decrypted = XChaCha20Poly1305.decrypt(encrypted, ad, nonce, key)
-        assertContentEquals(plaintext, decrypted)
-    }
-
-    @Test
-    fun testXChaCha20Poly1305_EmptyAD() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000102030405060708090a0b0c0d0e0f1011121314151617")
-        val ad = ByteArray(0)
-        val plaintext = "No additional data".encodeToByteArray()
-
-        val encrypted = XChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-        val decrypted = XChaCha20Poly1305.decrypt(encrypted, ad, nonce, key)
-        assertContentEquals(plaintext, decrypted)
-    }
-
-    // ===== ChaCha20 stream cipher (counter=0) for NIP-44v2 compatibility =====
+    // ===== ChaCha20 stream cipher (counter=0) =====
     @Test
     fun testChaCha20Xor_SymmetricEncryptDecrypt() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000000090000004a00000000")
         val plaintext = "Symmetric cipher test".encodeToByteArray()
 
         val encrypted = ChaCha20Core.chaCha20Xor(plaintext, key, nonce, counter = 0)
@@ -239,16 +126,113 @@ class ChaCha20CoreTest {
         assertContentEquals(plaintext, decrypted)
     }
 
+    @Test
+    fun testChaCha20Xor_IsKeystreamBlocksInOrder() {
+        // Every length around the word and block boundaries XORs the same keystream bytes
+        val keystream = ChaCha20Core.chaCha20Block(key, 7, nonce) + ChaCha20Core.chaCha20Block(key, 8, nonce)
+        for (size in 0..128) {
+            val message = ByteArray(size) { (it * 31).toByte() }
+            val expected = ByteArray(size) { (message[it].toInt() xor keystream[it].toInt()).toByte() }
+            assertContentEquals(expected, ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 7), "size $size")
+        }
+    }
+
     // ===== XChaCha20 stream cipher symmetry =====
     @Test
     fun testXChaCha20Xor_SymmetricEncryptDecrypt() {
-        val key = hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-        val nonce = hex("000102030405060708090a0b0c0d0e0f1011121314151617")
         val plaintext = "XChaCha20 symmetric test".encodeToByteArray()
 
-        val encrypted = ChaCha20Core.xChaCha20Xor(plaintext, nonce, key)
-        val decrypted = ChaCha20Core.xChaCha20Xor(encrypted, nonce, key)
+        val encrypted = ChaCha20Core.xChaCha20Xor(plaintext, xNonce, key)
+        val decrypted = ChaCha20Core.xChaCha20Xor(encrypted, xNonce, key)
 
         assertContentEquals(plaintext, decrypted)
+    }
+
+    // ===== 32-bit block counter: RFC 8439 §2.4 forbids wrapping round to block 0 =====
+
+    @Test
+    fun testCounterWrapThrows() {
+        // Two blocks from 0xffffffff would reuse block 0's keystream for the second
+        assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(128), key, nonce, counter = -1) }
+        // One byte past the last block is enough
+        assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(65), key, nonce, counter = -1) }
+        assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(64 * 16 + 1), key, nonce, counter = -16) }
+    }
+
+    @Test
+    fun testLastValidBlockWorks() {
+        // Block 0xffffffff, the last one, is usable on its own
+        val last = ChaCha20Core.chaCha20Block(key, -1, nonce)
+        assertContentEquals(last, ChaCha20Core.chaCha20Xor(ByteArray(64), key, nonce, counter = -1))
+        assertContentEquals(last.copyOf(10), ChaCha20Core.chaCha20Xor(ByteArray(10), key, nonce, counter = -1))
+        // and so is a run ending on it
+        val lastTwo = ChaCha20Core.chaCha20Block(key, -2, nonce) + last
+        assertContentEquals(lastTwo, ChaCha20Core.chaCha20Xor(ByteArray(128), key, nonce, counter = -2))
+        // An empty message needs no block at all
+        assertContentEquals(ByteArray(0), ChaCha20Core.chaCha20Xor(ByteArray(0), key, nonce, counter = -1))
+        // The keystream of the last block isn't block 0's
+        assertTrue(!last.contentEquals(ChaCha20Core.chaCha20Block(key, 0, nonce)))
+    }
+
+    @Test
+    fun testCounterCrossesFromSignedMaxToUnsignedHighRange() {
+        // Int.MAX_VALUE + 1 is block 2^31, which an Int holds as Int.MIN_VALUE
+        val expected = ChaCha20Core.chaCha20Block(key, Int.MAX_VALUE, nonce) + ChaCha20Core.chaCha20Block(key, Int.MIN_VALUE, nonce)
+        assertContentEquals(expected, ChaCha20Core.chaCha20Xor(ByteArray(128), key, nonce, counter = Int.MAX_VALUE))
+    }
+
+    // ===== Size checks =====
+
+    @Test
+    fun testChaCha20RejectsBadKeyAndNonceSizes() {
+        for (size in intArrayOf(0, 16, 31, 33, 64)) {
+            val badKey = ByteArray(size)
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(4), badKey, nonce) }
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Block(badKey, 0, nonce) }
+        }
+        for (size in intArrayOf(0, 8, 11, 13, 16, 24)) {
+            val badNonce = ByteArray(size)
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(4), key, badNonce) }
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Block(key, 0, badNonce) }
+        }
+        // Even an empty message is checked
+        assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(ByteArray(0), key, ByteArray(8)) }
+    }
+
+    @Test
+    fun testHChaCha20RejectsBadKeyAndInputSizes() {
+        val input = ByteArray(16)
+        for (size in intArrayOf(0, 16, 31, 33, 64)) {
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.hChaCha20(ByteArray(size), input) }
+        }
+        for (size in intArrayOf(0, 12, 15, 17, 24)) {
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.hChaCha20(key, ByteArray(size)) }
+        }
+    }
+
+    @Test
+    fun testXChaCha20RejectsBadKeyAndNonceSizes() {
+        for (size in intArrayOf(0, 16, 31, 33, 64)) {
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.xChaCha20Xor(ByteArray(4), xNonce, ByteArray(size)) }
+        }
+        for (size in intArrayOf(0, 12, 16, 23, 25, 32)) {
+            assertFailsWith<IllegalArgumentException> { ChaCha20Core.xChaCha20Xor(ByteArray(4), ByteArray(size), key) }
+        }
+    }
+
+    // ===== Argument order: chaCha20Xor is (message, key, nonce), xChaCha20Xor (message, nonce, key) =====
+
+    @Test
+    fun testSwappedKeyAndNonceFailLoudly() {
+        val message = ByteArray(4)
+
+        val chacha = assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Xor(message, nonce, key) }
+        assertEquals("ChaCha20 key must be 32 bytes, was 12", chacha.message)
+
+        val xchacha = assertFailsWith<IllegalArgumentException> { ChaCha20Core.xChaCha20Xor(message, key, xNonce) }
+        assertEquals("XChaCha20 key must be 32 bytes, was 24", xchacha.message)
+
+        val block = assertFailsWith<IllegalArgumentException> { ChaCha20Core.chaCha20Block(nonce, 0, key) }
+        assertEquals("ChaCha20 key must be 32 bytes, was 12", block.message)
     }
 }

@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.crypto.chacha
 
+import com.vitorpamplona.crypto.equalsConstantTime
+
 /**
- * Standard ChaCha20-Poly1305 AEAD (RFC 8439) with 12-byte nonces.
+ * Standard ChaCha20-Poly1305 AEAD (RFC 8439 §2.8) with 12-byte nonces.
  *
- * Used by the Marmot protocol (MIP-03) for outer encryption of GroupEvents.
  * Unlike [XChaCha20Poly1305] which uses 24-byte nonces via HChaCha20,
  * this operates directly with the IETF ChaCha20 variant.
  *
@@ -31,8 +32,14 @@ package com.vitorpamplona.crypto.chacha
  * 1. Generate Poly1305 OTK from ChaCha20 block 0
  * 2. Encrypt with ChaCha20 starting at counter 1
  * 3. Compute Poly1305 tag over: pad16(ad) || pad16(ciphertext) || len(ad) || len(ct)
+ *
+ * A wrong key or nonce size throws [IllegalArgumentException]; so does [decrypt] when the
+ * input is shorter than the tag or the tag does not verify, where [decryptOrNull] returns
+ * null instead. No plaintext is produced before the tag verifies.
  */
 object ChaCha20Poly1305 {
+    private const val KEY_SIZE = 32
+    private const val NONCE_SIZE = 12
     private const val TAG_SIZE = 16
 
     /**
@@ -50,22 +57,18 @@ object ChaCha20Poly1305 {
         nonce: ByteArray,
         key: ByteArray,
     ): ByteArray {
-        require(nonce.size == 12) { "Nonce must be 12 bytes" }
-        require(key.size == 32) { "Key must be 32 bytes" }
+        requireKeyAndNonce(key, nonce)
 
         // Step 1: Generate Poly1305 one-time key
         val polyKey = ChaCha20Core.chaCha20PolyKey(key, nonce)
 
-        // Step 2: Encrypt plaintext with counter starting at 1
-        val ciphertext = ChaCha20Core.chaCha20Xor(plaintext, key, nonce, counter = 1)
+        // Step 2: Encrypt plaintext with counter starting at 1, straight into the output
+        val result = ByteArray(plaintext.size + TAG_SIZE)
+        ChaCha20Core.chaCha20XorInto(plaintext, 0, plaintext.size, result, 0, key, nonce, counter = 1)
 
-        // Step 3: Compute tag
-        val tag = computeTag(polyKey, ad, ciphertext)
-
-        // Step 4: Return ciphertext || tag
-        val result = ByteArray(ciphertext.size + TAG_SIZE)
-        ciphertext.copyInto(result)
-        tag.copyInto(result, ciphertext.size)
+        // Step 3: Compute tag and append it: ciphertext || tag
+        computeTag(polyKey, ad, result, plaintext.size).copyInto(result, plaintext.size)
+        polyKey.fill(0)
         return result
     }
 
@@ -76,7 +79,8 @@ object ChaCha20Poly1305 {
      * @param ad associated data
      * @param nonce 12-byte nonce
      * @param key 32-byte key
-     * @return plaintext, or throws on authentication failure
+     * @return plaintext
+     * @throws IllegalArgumentException if the input is shorter than the tag or the tag does not verify
      */
     fun decrypt(
         ciphertextWithTag: ByteArray,
@@ -84,77 +88,81 @@ object ChaCha20Poly1305 {
         nonce: ByteArray,
         key: ByteArray,
     ): ByteArray {
-        require(nonce.size == 12) { "Nonce must be 12 bytes" }
-        require(key.size == 32) { "Key must be 32 bytes" }
-        require(ciphertextWithTag.size >= TAG_SIZE) { "Ciphertext too short" }
+        requireKeyAndNonce(key, nonce)
+        require(ciphertextWithTag.size >= TAG_SIZE) { "ChaCha20-Poly1305 input is shorter than its $TAG_SIZE-byte tag" }
+        return open(ciphertextWithTag, ad, nonce, key)
+            ?: throw IllegalArgumentException("ChaCha20-Poly1305 authentication failed")
+    }
 
+    /**
+     * [decrypt], but returns null when the input is shorter than the tag or the tag does not
+     * verify. A wrong key or nonce size still throws.
+     */
+    fun decryptOrNull(
+        ciphertextWithTag: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray? {
+        requireKeyAndNonce(key, nonce)
+        if (ciphertextWithTag.size < TAG_SIZE) return null
+        return open(ciphertextWithTag, ad, nonce, key)
+    }
+
+    /** Verifies the tag, then decrypts; null when the tag does not verify. */
+    private fun open(
+        ciphertextWithTag: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray? {
         val ctLen = ciphertextWithTag.size - TAG_SIZE
-        val ciphertext = ciphertextWithTag.copyOfRange(0, ctLen)
-        val receivedTag = ciphertextWithTag.copyOfRange(ctLen, ciphertextWithTag.size)
 
         // Step 1: Generate Poly1305 one-time key
         val polyKey = ChaCha20Core.chaCha20PolyKey(key, nonce)
 
         // Step 2: Verify tag
-        val expectedTag = computeTag(polyKey, ad, ciphertext)
-        check(constantTimeEquals(receivedTag, expectedTag)) { "Authentication failed" }
+        val expectedTag = computeTag(polyKey, ad, ciphertextWithTag, ctLen)
+        polyKey.fill(0)
+        val receivedTag = ciphertextWithTag.copyOfRange(ctLen, ciphertextWithTag.size)
+        if (!expectedTag.equalsConstantTime(receivedTag)) return null
 
         // Step 3: Decrypt
-        return ChaCha20Core.chaCha20Xor(ciphertext, key, nonce, counter = 1)
+        val plaintext = ByteArray(ctLen)
+        ChaCha20Core.chaCha20XorInto(ciphertextWithTag, 0, ctLen, plaintext, 0, key, nonce, counter = 1)
+        return plaintext
+    }
+
+    private fun requireKeyAndNonce(
+        key: ByteArray,
+        nonce: ByteArray,
+    ) {
+        require(key.size == KEY_SIZE) { "ChaCha20-Poly1305 key must be $KEY_SIZE bytes, was ${key.size}" }
+        require(nonce.size == NONCE_SIZE) { "ChaCha20-Poly1305 nonce must be $NONCE_SIZE bytes, was ${nonce.size}" }
     }
 
     /**
-     * Compute Poly1305 tag over the AEAD construction:
-     * pad16(ad) || pad16(ciphertext) || len(ad) as 8-byte LE || len(ct) as 8-byte LE
+     * Compute Poly1305 tag over the AEAD construction, streaming so nothing is copied:
+     * pad16(ad) || pad16(ciphertext) || len(ad) as 8-byte LE || len(ct) as 8-byte LE,
+     * where the ciphertext is the first [ctLen] bytes of [ciphertext].
      */
     private fun computeTag(
         polyKey: ByteArray,
         ad: ByteArray,
         ciphertext: ByteArray,
+        ctLen: Int,
     ): ByteArray {
-        val adPadLen = if (ad.size % 16 == 0) 0 else 16 - (ad.size % 16)
-        val ctPadLen = if (ciphertext.size % 16 == 0) 0 else 16 - (ciphertext.size % 16)
+        val poly = Poly1305State(polyKey)
+        poly.update(ad)
+        poly.padToBlock()
+        poly.update(ciphertext, 0, ctLen)
+        poly.padToBlock()
 
-        val macData = ByteArray(ad.size + adPadLen + ciphertext.size + ctPadLen + 16)
-        var offset = 0
-
-        ad.copyInto(macData, offset)
-        offset += ad.size + adPadLen
-
-        ciphertext.copyInto(macData, offset)
-        offset += ciphertext.size + ctPadLen
-
-        longToLittleEndian(ad.size.toLong(), macData, offset)
-        offset += 8
-        longToLittleEndian(ciphertext.size.toLong(), macData, offset)
-
-        return Poly1305.mac(macData, polyKey)
-    }
-
-    private fun constantTimeEquals(
-        a: ByteArray,
-        b: ByteArray,
-    ): Boolean {
-        if (a.size != b.size) return false
-        var result = 0
-        for (i in a.indices) {
-            result = result or (a[i].toInt() xor b[i].toInt())
-        }
-        return result == 0
-    }
-
-    private fun longToLittleEndian(
-        value: Long,
-        output: ByteArray,
-        offset: Int,
-    ) {
-        output[offset] = (value and 0xFF).toByte()
-        output[offset + 1] = (value ushr 8 and 0xFF).toByte()
-        output[offset + 2] = (value ushr 16 and 0xFF).toByte()
-        output[offset + 3] = (value ushr 24 and 0xFF).toByte()
-        output[offset + 4] = (value ushr 32 and 0xFF).toByte()
-        output[offset + 5] = (value ushr 40 and 0xFF).toByte()
-        output[offset + 6] = (value ushr 48 and 0xFF).toByte()
-        output[offset + 7] = (value ushr 56 and 0xFF).toByte()
+        // Both lengths are non-negative Ints, so their high 4 bytes stay zero.
+        val lengths = ByteArray(16)
+        ad.size.intToLittleEndian(lengths, 0)
+        ctLen.intToLittleEndian(lengths, 8)
+        poly.update(lengths)
+        return poly.finish()
     }
 }
