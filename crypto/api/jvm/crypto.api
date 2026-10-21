@@ -151,7 +151,6 @@ public abstract class com/vitorpamplona/crypto/digest/GeneralDigest : com/vitorp
 }
 
 public final class com/vitorpamplona/crypto/digest/KeccakDigest : com/vitorpamplona/crypto/digest/Digest {
-	public static final field Companion Lcom/vitorpamplona/crypto/digest/KeccakDigest$Companion;
 	public fun <init> (I)V
 	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Lcom/vitorpamplona/crypto/digest/KeccakDigest;)V
@@ -163,20 +162,13 @@ public final class com/vitorpamplona/crypto/digest/KeccakDigest : com/vitorpampl
 	public fun update ([BII)V
 }
 
-public final class com/vitorpamplona/crypto/digest/KeccakDigest$Companion {
-}
-
 public final class com/vitorpamplona/crypto/digest/RIPEMD160Digest : com/vitorpamplona/crypto/digest/GeneralDigest {
-	public static final field Companion Lcom/vitorpamplona/crypto/digest/RIPEMD160Digest$Companion;
 	public fun <init> ()V
 	public fun <init> (Lcom/vitorpamplona/crypto/digest/RIPEMD160Digest;)V
 	public fun doFinal ([BI)I
 	public fun getAlgorithmName ()Ljava/lang/String;
 	public fun getDigestSize ()I
 	public fun reset ()V
-}
-
-public final class com/vitorpamplona/crypto/digest/RIPEMD160Digest$Companion {
 }
 
 public final class com/vitorpamplona/crypto/kdf/Hkdf {

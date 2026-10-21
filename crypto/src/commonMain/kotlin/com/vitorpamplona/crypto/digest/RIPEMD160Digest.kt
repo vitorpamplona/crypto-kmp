@@ -596,7 +596,7 @@ public class RIPEMD160Digest : GeneralDigest {
         }
     }
 
-    public companion object {
+    private companion object {
         private const val DIGEST_LENGTH = 20
     }
 }

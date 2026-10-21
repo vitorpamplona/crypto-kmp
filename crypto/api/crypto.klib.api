@@ -118,8 +118,6 @@ final class com.vitorpamplona.crypto.digest/KeccakDigest : com.vitorpamplona.cry
     final fun reset() // com.vitorpamplona.crypto.digest/KeccakDigest.reset|reset(){}[0]
     final fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/KeccakDigest.update|update(kotlin.Byte){}[0]
     final fun update(kotlin/ByteArray, kotlin/Int, kotlin/Int) // com.vitorpamplona.crypto.digest/KeccakDigest.update|update(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
-
-    final object Companion // com.vitorpamplona.crypto.digest/KeccakDigest.Companion|null[0]
 }
 
 final class com.vitorpamplona.crypto.digest/RIPEMD160Digest : com.vitorpamplona.crypto.digest/GeneralDigest { // com.vitorpamplona.crypto.digest/RIPEMD160Digest|null[0]
@@ -130,8 +128,6 @@ final class com.vitorpamplona.crypto.digest/RIPEMD160Digest : com.vitorpamplona.
     final fun getAlgorithmName(): kotlin/String // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getAlgorithmName|getAlgorithmName(){}[0]
     final fun getDigestSize(): kotlin/Int // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getDigestSize|getDigestSize(){}[0]
     final fun reset() // com.vitorpamplona.crypto.digest/RIPEMD160Digest.reset|reset(){}[0]
-
-    final object Companion // com.vitorpamplona.crypto.digest/RIPEMD160Digest.Companion|null[0]
 }
 
 final class com.vitorpamplona.crypto.kdf/Hkdf { // com.vitorpamplona.crypto.kdf/Hkdf|null[0]

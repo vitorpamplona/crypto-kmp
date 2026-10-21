@@ -466,7 +466,7 @@ public class KeccakDigest : Digest {
         byteState.copyInto(data, 0, 0, laneCount * 8)
     }
 
-    public companion object {
+    private companion object {
         private val KeccakRoundConstants: LongArray = keccakInitializeRoundConstants()
 
         private val KeccakRhoOffsets: IntArray = keccakInitializeRhoOffsets()
