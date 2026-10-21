@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
@@ -61,12 +62,7 @@ public actual class AESCBC actual constructor(
 
     actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = cbcDecrypt(bytesToDecrypt) { crypt(kCCDecrypt, it) }
 
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt) }
 
     /** CBC without padding over [blocks], a non-empty whole number of 16-byte blocks. */
     @OptIn(ExperimentalForeignApi::class)

@@ -43,3 +43,14 @@ public interface SymmetricCipher {
     /** [decrypt], returning null in exactly the cases where it would throw. */
     public fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
 }
+
+/**
+ * Runs a decryption, mapping the failures every [SymmetricCipher.decrypt] reports with
+ * [IllegalArgumentException] to null: the one shared body of every `decryptOrNull`.
+ */
+internal inline fun nullOnDecryptFailure(decryption: () -> ByteArray): ByteArray? =
+    try {
+        decryption()
+    } catch (_: IllegalArgumentException) {
+        null
+    }

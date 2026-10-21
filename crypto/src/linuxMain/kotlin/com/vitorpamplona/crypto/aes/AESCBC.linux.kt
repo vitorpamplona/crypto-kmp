@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 
 public actual class AESCBC actual constructor(
     public actual val keyBytes: ByteArray,
@@ -41,10 +42,5 @@ public actual class AESCBC actual constructor(
 
     actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = cbcDecrypt(bytesToDecrypt) { key.decrypt(fixedIv, it) }
 
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt) }
 }

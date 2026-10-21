@@ -44,16 +44,12 @@ public actual fun sha256Into(
     data: ByteArray,
     len: Int,
 ): ByteArray {
-    // Checked before the digest sees any data: a throw after update() would leave it fed.
+    // Checked before the digest sees any data: with these in range, neither call below can
+    // throw, so a failure never leaves the thread's digest half-fed.
     checkSha256IntoArgs(out, data, len)
     val md = threadLocalDigest.get()!!
-    try {
-        md.update(data, 0, len)
-        md.digest(out, 0, 32)
-    } catch (e: Throwable) {
-        md.reset()
-        throw e
-    }
+    md.update(data, 0, len)
+    md.digest(out, 0, 32)
     return out
 }
 

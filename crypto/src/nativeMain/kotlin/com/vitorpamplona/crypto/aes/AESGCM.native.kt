@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 
 /**
  * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
@@ -65,12 +66,7 @@ public actual class AESGCM actual constructor(
     public actual fun decryptOrNull(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt, aad)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
+    ): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt, aad) }
 
     private companion object {
         val EMPTY = ByteArray(0)

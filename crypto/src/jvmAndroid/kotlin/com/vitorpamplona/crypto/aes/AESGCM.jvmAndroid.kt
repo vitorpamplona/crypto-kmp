@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -81,12 +82,7 @@ public actual class AESGCM actual constructor(
     public actual fun decryptOrNull(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt, aad)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
+    ): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt, aad) }
 
     private companion object {
         val EMPTY = ByteArray(0)
