@@ -58,41 +58,49 @@ object Ed25519 {
         require(privateKey.size == SEED_LENGTH * 2) { "Private key must be 64 bytes (seed + public)" }
 
         val seed = privateKey.copyOfRange(0, SEED_LENGTH)
-        val publicKey = privateKey.copyOfRange(SEED_LENGTH, SEED_LENGTH * 2)
+        // SHA-512(seed), clamped: the secret scalar a, then the nonce prefix.
+        val expanded = expandSeed(seed)
+        val scalar = expanded.copyOfRange(0, 32)
+        val prefix = expanded.copyOfRange(32, 64)
 
-        // SHA-512(seed) -> expanded key
-        val d = sha512(seed)
-        // Clamp the scalar
-        d[0] = (d[0].toInt() and 248).toByte()
-        d[31] = ((d[31].toInt() and 63) or 64).toByte()
+        // A is derived from the seed, never read from privateKey[32..64]. A
+        // tampered second half would go into the challenge below, and two
+        // signatures of one message under seed||A and seed||A' share r but not
+        // the challenge: two equations, enough to solve for a.
+        val publicKey = packPoint(scalarMultBase(scalar))
 
-        // r = SHA-512(d[32..63] || message) mod L
-        val rHash = sha512(d.copyOfRange(32, 64) + message)
+        // r = SHA-512(prefix || message) mod L
+        val rHash = sha512(prefix, message)
         val r = reduce(rHash)
 
         // R = [r]B
-        val rPoint = scalarMultBase(r)
-        val rBytes = packPoint(rPoint)
+        val rBytes = packPoint(scalarMultBase(r))
 
-        // S = (r + SHA-512(R || publicKey || message) * s) mod L
-        val hramHash = sha512(rBytes + publicKey + message)
-        val hram = reduce(hramHash)
+        // S = (r + SHA-512(R || A || message) * a) mod L
+        val hram = reduce(sha512(rBytes, publicKey, message))
 
         val signature = ByteArray(64)
         rBytes.copyInto(signature, 0)
 
-        // Compute s = r + hram * d (mod L) in 64-byte arithmetic
+        // Compute S = r + hram * a (mod L) in 64-byte arithmetic
         val x = LongArray(64)
         for (i in 0 until 32) x[i] = r[i].toLong() and 0xFF
         for (i in 0 until 32) {
             for (j in 0 until 32) {
-                x[i + j] += (hram[i].toLong() and 0xFF) * (d[j].toLong() and 0xFF)
+                x[i + j] += (hram[i].toLong() and 0xFF) * (scalar[j].toLong() and 0xFF)
             }
         }
 
         val sBytes = modL(x)
         sBytes.copyInto(signature, 32)
 
+        seed.fill(0)
+        expanded.fill(0)
+        scalar.fill(0)
+        prefix.fill(0)
+        rHash.fill(0)
+        r.fill(0)
+        x.fill(0)
         return signature
     }
 
@@ -140,12 +148,19 @@ object Ed25519 {
 
     /**
      * Derive the public key from a private key.
+     *
+     * The key is computed from the seed, the first 32 bytes. The copy stored in
+     * the second half is ignored, as [sign] ignores it.
+     *
      * @param privateKey 64-byte private key (seed + public key)
      * @return 32-byte public key
      */
     fun publicFromPrivate(privateKey: ByteArray): ByteArray {
         require(privateKey.size == SEED_LENGTH * 2) { "Private key must be 64 bytes (seed + public)" }
-        return privateKey.copyOfRange(SEED_LENGTH, SEED_LENGTH * 2)
+        val seed = privateKey.copyOfRange(0, SEED_LENGTH)
+        val publicKey = derivePublicKey(seed)
+        seed.fill(0)
+        return publicKey
     }
 
     /**
@@ -168,17 +183,25 @@ object Ed25519 {
 
     // --- Internal operations ---
 
-    /** Derive Ed25519 public key from 32-byte seed. */
-    private fun derivePublicKey(seed: ByteArray): ByteArray {
-        val d = sha512(seed)
-        d[0] = (d[0].toInt() and 248).toByte()
-        d[31] = ((d[31].toInt() and 63) or 64).toByte()
-
-        val p = scalarMultBase(d.copyOfRange(0, 32))
-        return packPoint(p)
+    /** SHA-512 of the seed, its first half clamped into the secret scalar (RFC 8032 §5.1.5). */
+    private fun expandSeed(seed: ByteArray): ByteArray {
+        val h = sha512(seed)
+        h[0] = (h[0].toInt() and 248).toByte()
+        h[31] = ((h[31].toInt() and 63) or 64).toByte()
+        return h
     }
 
-    private fun sha512(data: ByteArray): ByteArray = ed25519Sha512(data)
+    /** Derive Ed25519 public key from 32-byte seed. */
+    private fun derivePublicKey(seed: ByteArray): ByteArray {
+        val expanded = expandSeed(seed)
+        val scalar = expanded.copyOfRange(0, 32)
+        val publicKey = packPoint(scalarMultBase(scalar))
+        expanded.fill(0)
+        scalar.fill(0)
+        return publicKey
+    }
+
+    private fun sha512(vararg parts: ByteArray): ByteArray = ed25519Sha512(*parts)
 
     // --- Extended Edwards point operations ---
     // Point = Array of 4 LongArray(10), representing (X, Y, Z, T)
