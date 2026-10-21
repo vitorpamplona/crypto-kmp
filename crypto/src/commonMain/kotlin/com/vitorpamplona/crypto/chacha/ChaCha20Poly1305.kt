@@ -124,8 +124,9 @@ public object ChaCha20Poly1305 {
         // Step 2: Verify tag
         val expectedTag = computeTag(polyKey, ad, ciphertextWithTag, ctLen)
         polyKey.fill(0)
-        val receivedTag = ciphertextWithTag.copyOfRange(ctLen, ciphertextWithTag.size)
-        if (!expectedTag.equalsConstantTime(receivedTag)) return null
+        val valid = expectedTag.equalsConstantTime(ciphertextWithTag.copyOfRange(ctLen, ciphertextWithTag.size))
+        expectedTag.fill(0)
+        if (!valid) return null
 
         // Step 3: Decrypt
         val plaintext = ByteArray(ctLen)
