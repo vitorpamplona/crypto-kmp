@@ -574,6 +574,17 @@ internal object Curve25519Field {
         c.copyInto(o)
     }
 
+    /**
+     * True when [a] is zero mod p. ORs every byte of the canonical encoding
+     * together rather than stopping at the first non-zero one.
+     */
+    fun isZero(a: LongArray): Boolean {
+        val bytes = pack25519(a)
+        var acc = 0
+        for (b in bytes) acc = acc or b.toInt()
+        return acc == 0
+    }
+
     /** Parity of a field element (lowest bit after reduction). */
     fun par25519(a: LongArray): Int {
         val d = pack25519(a)

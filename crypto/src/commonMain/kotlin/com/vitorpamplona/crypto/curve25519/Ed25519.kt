@@ -106,20 +106,26 @@ object Ed25519 {
 
     /**
      * Verify an Ed25519 signature.
+     *
+     * Beyond the RFC 8032 equation, this rejects what libsodium rejects, so a
+     * signature accepted here is accepted there too:
+     * - S must be below L, so S + L is not a second valid signature;
+     * - A and R must be canonical encodings: y below p, and no sign bit on x = 0;
+     * - A and R must not have small order, where [8]P is the identity. A
+     *   small-order key verifies some signatures for any message.
+     *
      * @param message the signed data
      * @param signature 64-byte signature
      * @param publicKey 32-byte public key
-     * @return true if signature is valid
+     * @return true if signature is valid; false for anything else, including a
+     *   signature or public key of the wrong length.
      */
     fun verify(
         message: ByteArray,
         signature: ByteArray,
         publicKey: ByteArray,
     ): Boolean {
-        require(publicKey.size == PUBLIC_KEY_LENGTH) { "Public key must be 32 bytes" }
-        if (signature.size != 64) return false
-
-        val aPoint = unpackPoint(publicKey) ?: return false
+        if (publicKey.size != PUBLIC_KEY_LENGTH || signature.size != 64) return false
 
         val rBytes = signature.copyOfRange(0, 32)
         val sBytes = signature.copyOfRange(32, 64)
@@ -127,8 +133,14 @@ object Ed25519 {
         // Check s < L
         if (!isCanonicalScalar(sBytes)) return false
 
-        val hramHash = sha512(rBytes + publicKey + message)
-        val hram = reduce(hramHash)
+        val aPoint = unpackPoint(publicKey) ?: return false
+        if (hasSmallOrder(aPoint)) return false
+        // R is only compared as bytes below, but a small-order R is what lets
+        // a mixed-order key pass, so it is decoded and checked like A.
+        val rPoint = unpackPoint(rBytes) ?: return false
+        if (hasSmallOrder(rPoint)) return false
+
+        val hram = reduce(sha512(rBytes, publicKey, message))
 
         // Verify: [s]B = R + [hram]A
         // Equivalent: [s]B - [hram]A = R
@@ -364,12 +376,23 @@ object Ed25519 {
     }
 
     /**
-     * Unpack a 32-byte compressed Edwards point.
-     * Returns null if the point is not on the curve.
+     * Unpack a 32-byte compressed Edwards point (RFC 8032 §5.1.3).
+     *
+     * Returns null if the point is not on the curve or the encoding is not
+     * canonical: y at or above p (a second encoding of y - p), or x = 0 with
+     * the sign bit set (a second encoding of the same point). Only ever
+     * called on public data, so the early returns leak nothing.
      */
     private fun unpackPoint(s: ByteArray): Array<LongArray>? {
         val p = newPoint()
         val r = Curve25519Field.unpack25519(s)
+        // unpack25519 keeps y as given, so y >= p is caught by re-encoding:
+        // pack25519 reduces, and only a canonical y comes back unchanged.
+        val canonical = Curve25519Field.pack25519(r)
+        canonical[31] = (canonical[31].toInt() or (s[31].toInt() and 0x80)).toByte()
+        if (!canonical.contentEquals(s)) return null
+        val sign = (s[31].toInt() shr 7) and 1
+
         r.copyInto(p[1])
         Curve25519Field.GF1.copyInto(p[2])
 
@@ -379,7 +402,7 @@ object Ed25519 {
         val num = Curve25519Field.sub(y2, Curve25519Field.GF1)
         val den = Curve25519Field.add(Curve25519Field.mul(d, y2), Curve25519Field.GF1)
         val denInv = Curve25519Field.inv25519(den)
-        var x2 = Curve25519Field.mul(num, denInv)
+        val x2 = Curve25519Field.mul(num, denInv)
 
         // Try sqrt(x2)
         var x = Curve25519Field.pow2523(x2)
@@ -387,25 +410,38 @@ object Ed25519 {
 
         // Check: x^2 == x2?
         val check = Curve25519Field.sub(Curve25519Field.sqr(x), x2)
-        val checkPacked = Curve25519Field.pack25519(check)
-        if (!checkPacked.all { it == 0.toByte() }) {
+        if (!Curve25519Field.isZero(check)) {
             // Try x * sqrt(-1)
             x = Curve25519Field.mul(x, Curve25519Field.I)
             val check2 = Curve25519Field.sub(Curve25519Field.sqr(x), x2)
-            val check2Packed = Curve25519Field.pack25519(check2)
-            if (!check2Packed.all { it == 0.toByte() }) {
+            if (!Curve25519Field.isZero(check2)) {
                 return null
             }
         }
 
+        // x = 0 has no negative, so a sign bit on it is a second encoding.
+        if (sign == 1 && Curve25519Field.isZero(x)) return null
+
         // Adjust sign
-        if (Curve25519Field.par25519(x) != ((s[31].toInt() shr 7) and 1)) {
+        if (Curve25519Field.par25519(x) != sign) {
             x = Curve25519Field.sub(Curve25519Field.GF0, x)
         }
 
         x.copyInto(p[0])
         Curve25519Field.mul(p[0], p[1]).copyInto(p[3])
         return p
+    }
+
+    /**
+     * True when [p] has small order: [8]P is the identity, which covers the
+     * eight points of the torsion subgroup. Three doublings, then the identity
+     * test in projective form: X = 0 and Y = Z.
+     */
+    private fun hasSmallOrder(p: Array<LongArray>): Boolean {
+        val q = arrayOf(p[0].copyOf(), p[1].copyOf(), p[2].copyOf(), p[3].copyOf())
+        val scratch = PointAddScratch()
+        repeat(3) { addPointInPlace(q, q, scratch) }
+        return Curve25519Field.isZero(q[0]) && Curve25519Field.isZero(Curve25519Field.sub(q[1], q[2]))
     }
 
     // --- Scalar reduction modulo L ---

@@ -253,4 +253,175 @@ class Ed25519Test {
         val msg = "hi".encodeToByteArray()
         assertTrue(Ed25519.verify(msg, Ed25519.sign(msg, rebuilt.privateKey), generated.publicKey))
     }
+
+    // --- Rejections ---
+
+    /** L = 2^252 + 27742317777372353535851937790883648493, little-endian. */
+    private val groupOrder = "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010".hexToByteArray()
+
+    /** Little-endian a + b over 32 bytes, dropping the final carry. */
+    private fun add256(
+        a: ByteArray,
+        b: ByteArray,
+    ): ByteArray {
+        val out = ByteArray(32)
+        var carry = 0
+        for (i in 0 until 32) {
+            val sum = (a[i].toInt() and 0xFF) + (b[i].toInt() and 0xFF) + carry
+            out[i] = sum.toByte()
+            carry = sum shr 8
+        }
+        return out
+    }
+
+    @Test
+    fun rejectsSEqualToL() {
+        val v = rfc8032[0]
+        val signature = v.signature.hexToByteArray()
+        groupOrder.copyInto(signature, 32)
+        assertFalse(Ed25519.verify(v.message.hexToByteArray(), signature, v.publicKey.hexToByteArray()))
+    }
+
+    @Test
+    fun rejectsSPlusL() {
+        // [S + L]B = [S]B, so S + L satisfies the verification equation. Only
+        // the S < L check stops this second signature for the same message.
+        for (v in rfc8032) {
+            val signature = v.signature.hexToByteArray()
+            add256(signature.copyOfRange(32, 64), groupOrder).copyInto(signature, 32)
+            assertFalse(Ed25519.verify(v.message.hexToByteArray(), signature, v.publicKey.hexToByteArray()))
+        }
+    }
+
+    private class Forgery(
+        val name: String,
+        val publicKey: String,
+        val message: String,
+        val signature: String,
+    )
+
+    /**
+     * Signatures that satisfy the cofactorless equation [S]B = R + [k]A once the
+     * encodings are decoded leniently (y reduced mod p, a sign bit on x = 0
+     * dropped), so only the canonical-encoding and small-order checks reject
+     * them. JCA accepts the two small-order ones. Built with a Python reference
+     * from the RFC 8032 test 1 key: R = identity with S = k*a for the R cases,
+     * and R = [r]B with S = r for keys that act as the identity or, with the
+     * message chosen so 8 divides k, as an order-8 point.
+     */
+    private val forgeries =
+        listOf(
+            Forgery(
+                name = "small-order R (the identity)",
+                publicKey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                message = "72656a656374696f6e2074657374",
+                signature =
+                    "0100000000000000000000000000000000000000000000000000000000000000" +
+                        "401fe764dca6a9962a784cde6fe6c57e4cf18724514e6bac983026501800520a",
+            ),
+            Forgery(
+                name = "non-canonical R (y = p + 1)",
+                publicKey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                message = "72656a656374696f6e2074657374",
+                signature =
+                    "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f" +
+                        "faea7f9fd67cda262c47f4fca72694084e11a0ab8eba0c224ab20c39dfcc7f0c",
+            ),
+            Forgery(
+                name = "non-canonical A (y = p + 1)",
+                publicKey = "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+                message = "72656a656374696f6e2074657374",
+                signature =
+                    "c4c1227d7fff941a976049ecefad7b663fa5121d769cbbd79a53d344e4773e98" +
+                        "efcdab9078563412000000000000000000000000000000000000000000000000",
+            ),
+            Forgery(
+                name = "A with x = 0 and the sign bit set",
+                publicKey = "0100000000000000000000000000000000000000000000000000000000000080",
+                message = "72656a656374696f6e2074657374",
+                signature =
+                    "c4c1227d7fff941a976049ecefad7b663fa5121d769cbbd79a53d344e4773e98" +
+                        "efcdab9078563412000000000000000000000000000000000000000000000000",
+            ),
+            Forgery(
+                name = "small-order A (order 8)",
+                publicKey = "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+                message = "72656a656374696f6e207465737401",
+                signature =
+                    "c4c1227d7fff941a976049ecefad7b663fa5121d769cbbd79a53d344e4773e98" +
+                        "efcdab9078563412000000000000000000000000000000000000000000000000",
+            ),
+        )
+
+    @Test
+    fun rejectsNonCanonicalAndSmallOrderPoints() {
+        for (f in forgeries) {
+            assertFalse(
+                Ed25519.verify(f.message.hexToByteArray(), f.signature.hexToByteArray(), f.publicKey.hexToByteArray()),
+                f.name,
+            )
+        }
+    }
+
+    @Test
+    fun rejectsEveryEncodingOfASmallOrderKey() {
+        val v = rfc8032[0]
+        val smallOrder =
+            listOf(
+                "0100000000000000000000000000000000000000000000000000000000000000", // identity
+                "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f", // (0, -1), order 2
+                "0000000000000000000000000000000000000000000000000000000000000080", // (sqrt(-1), 0) with x odd, order 4
+                "0000000000000000000000000000000000000000000000000000000000000000", // (sqrt(-1), 0) with x even, order 4
+                "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05", // order 8
+                "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85", // order 8
+                "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a", // order 8
+                "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa", // order 8
+            )
+        for (key in smallOrder) {
+            assertFalse(Ed25519.verify(v.message.hexToByteArray(), v.signature.hexToByteArray(), key.hexToByteArray()), key)
+        }
+    }
+
+    @Test
+    fun rejectsOffCurveKey() {
+        // y = 2: (y^2 - 1) / (d y^2 + 1) has no square root, so no x exists.
+        val v = rfc8032[0]
+        val offCurve = "0200000000000000000000000000000000000000000000000000000000000000".hexToByteArray()
+        assertFalse(Ed25519.verify(v.message.hexToByteArray(), v.signature.hexToByteArray(), offCurve))
+    }
+
+    @Test
+    fun wrongLengthsReturnFalse() {
+        val v = rfc8032[1]
+        val message = v.message.hexToByteArray()
+        val signature = v.signature.hexToByteArray()
+        val publicKey = v.publicKey.hexToByteArray()
+        for (size in listOf(0, 31, 33, 64)) {
+            assertFalse(Ed25519.verify(message, signature, publicKey.copyOf(size)), "public key of $size bytes")
+        }
+        for (size in listOf(0, 32, 63, 65, 128)) {
+            assertFalse(Ed25519.verify(message, signature.copyOf(size), publicKey), "signature of $size bytes")
+        }
+    }
+
+    @Test
+    fun rejectsEveryFlippedBit() {
+        val v = rfc8032[2]
+        val message = v.message.hexToByteArray()
+        val signature = v.signature.hexToByteArray()
+        val publicKey = v.publicKey.hexToByteArray()
+        assertTrue(Ed25519.verify(message, signature, publicKey))
+
+        fun ByteArray.flip(bit: Int) = copyOf().also { it[bit shr 3] = (it[bit shr 3].toInt() xor (1 shl (bit and 7))).toByte() }
+
+        for (bit in 0 until message.size * 8) {
+            assertFalse(Ed25519.verify(message.flip(bit), signature, publicKey), "message bit $bit")
+        }
+        for (bit in 0 until 512) {
+            assertFalse(Ed25519.verify(message, signature.flip(bit), publicKey), "signature bit $bit")
+        }
+        for (bit in 0 until 256) {
+            assertFalse(Ed25519.verify(message, signature, publicKey.flip(bit)), "public key bit $bit")
+        }
+    }
 }
