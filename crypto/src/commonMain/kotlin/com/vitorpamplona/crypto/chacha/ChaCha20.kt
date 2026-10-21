@@ -20,16 +20,24 @@
  */
 package com.vitorpamplona.crypto.chacha
 
-class ChaCha20 {
-    fun encrypt(
+/**
+ * The unauthenticated ChaCha20 stream cipher (RFC 8439 §2.4): a 32-byte key and a 12-byte
+ * nonce, starting at block counter 0. Encrypting and decrypting are the same XOR with the
+ * keystream.
+ *
+ * Note the argument order, (message, nonce, key), differs from [ChaCha20Core.chaCha20Xor]'s.
+ * A wrong key or nonce size throws [IllegalArgumentException], so the two swapped fail.
+ */
+public object ChaCha20 {
+    public fun encrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
+    ): ByteArray = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 
-    fun decrypt(
+    public fun decrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
+    ): ByteArray = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 }

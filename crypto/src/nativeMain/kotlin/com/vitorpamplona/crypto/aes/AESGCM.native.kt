@@ -21,41 +21,52 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
-import com.vitorpamplona.crypto.aes.AesGcmKey
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 
 /**
  * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
  * Apple implementation that has one, CryptoKit, is Swift-only.
  */
-actual class AESGCM actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val nonce: ByteArray,
+public actual class AESGCM actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val nonce: ByteArray,
 ) : SymmetricCipher {
-    // Expanded once, on first use, and reused by every call on this instance.
-    private val key by lazy { AesGcmKey(keyBytes) }
+    init {
+        requireGcmNonce(nonce)
+    }
+
+    // Expanded here (which also checks the key size) and reused by every call on this
+    // instance; with the nonce copy, later changes to keyBytes or nonce don't reach it.
+    private val key = AesGcmKey(keyBytes)
+    private val fixedNonce = nonce.copyOf()
+
+    private val guard = NonceGuard()
 
     actual override fun name(): String = AES_GCM_NAME
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(nonce, bytesToEncrypt, EMPTY)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = encrypt(bytesToEncrypt, EMPTY)
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(nonce, bytesToDecrypt, EMPTY)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = decrypt(bytesToDecrypt, EMPTY)
 
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = decryptOrNull(bytesToDecrypt, EMPTY)
 
-    actual fun encrypt(
+    public actual fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray = key.encrypt(nonce, bytesToEncrypt, aad)
+    ): ByteArray {
+        guard.claim()
+        return key.encrypt(fixedNonce, bytesToEncrypt, aad)
+    }
 
-    actual fun decrypt(
+    public actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray = key.decrypt(nonce, bytesToDecrypt, aad)
+    ): ByteArray = key.decrypt(fixedNonce, bytesToDecrypt, aad)
+
+    public actual fun decryptOrNull(
+        bytesToDecrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt, aad) }
 
     private companion object {
         val EMPTY = ByteArray(0)

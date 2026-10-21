@@ -21,105 +21,81 @@
 package com.vitorpamplona.crypto.random
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
+import platform.linux.SYS_getrandom
+import platform.posix.EINTR
+import platform.posix.ENOSYS
+import platform.posix.EPERM
+import platform.posix.O_CLOEXEC
 import platform.posix.O_RDONLY
 import platform.posix.close
+import platform.posix.errno
 import platform.posix.open
 import platform.posix.read
+import platform.posix.size_t
+import platform.posix.syscall
+import kotlin.concurrent.Volatile
 
-actual class SecureRandom {
-    actual fun nextInt(): Int {
-        val bytes = ByteArray(4)
-        nextBytes(bytes)
-        return ((bytes[0].toInt() and 0xFF) shl 24) or
-            ((bytes[1].toInt() and 0xFF) shl 16) or
-            ((bytes[2].toInt() and 0xFF) shl 8) or
-            (bytes[3].toInt() and 0xFF)
-    }
-
-    actual fun nextInt(bound: Int): Int {
-        require(bound > 0) { throw IllegalArgumentException("Bad Bound $bound") }
-
-        var intValue = nextPositiveInt()
-
-        val m = bound - 1
-        if ((bound and m) == 0) {
-            intValue = ((bound * intValue.toLong()) shr 31).toInt()
-        } else {
-            var u: Int = intValue
-            intValue = u % bound
-            while (u - intValue + m < 0) {
-                u = nextPositiveInt()
-                intValue = u % bound
+/**
+ * `getrandom(2)` with no flags: it blocks only until the kernel's pool is first seeded,
+ * and after that fails only when a signal interrupts it. Called through `syscall`
+ * because the glibc Kotlin/Native links against predates the `getrandom` wrapper.
+ * Where the call is missing (`ENOSYS`, kernels before 3.17) or a seccomp filter refuses it
+ * (`EPERM`, some older container profiles), this falls back to `/dev/urandom`, and keeps
+ * using it: the answer won't change for this process.
+ */
+@OptIn(ExperimentalForeignApi::class)
+internal actual fun fillSecureRandom(output: ByteArray) {
+    if (output.isEmpty()) return
+    output.usePinned { pinned ->
+        if (getrandomUnavailable) return readUrandom(pinned, 0, output.size)
+        var filled = 0
+        while (filled < output.size) {
+            val result = syscall(SYS_getrandom.convert(), pinned.addressOf(filled), (output.size - filled).convert<size_t>(), 0u)
+            if (result >= 0) {
+                // A large request can come back short: ask again for the rest.
+                filled += result.toInt()
+                continue
             }
-        }
-
-        return intValue
-    }
-
-    actual fun nextLong(): Long {
-        val bytes = ByteArray(8)
-        nextBytes(bytes)
-        return ((bytes[0].toLong() and 0xFFL) shl 56) or
-            ((bytes[1].toLong() and 0xFFL) shl 48) or
-            ((bytes[2].toLong() and 0xFFL) shl 40) or
-            ((bytes[3].toLong() and 0xFFL) shl 32) or
-            ((bytes[4].toLong() and 0xFFL) shl 24) or
-            ((bytes[5].toLong() and 0xFFL) shl 16) or
-            ((bytes[6].toLong() and 0xFFL) shl 8) or
-            (bytes[7].toLong() and 0xFFL)
-    }
-
-    actual fun nextLong(bound: Long): Long {
-        require(bound > 0) { throw IllegalArgumentException("Bad Bound $bound") }
-
-        if (bound < Int.MAX_VALUE) {
-            return nextInt(bound.toInt()).toLong()
-        }
-
-        return nextPositiveLong() % bound
-    }
-
-    fun nextPositiveInt(): Int {
-        val value = nextInt()
-        return if (value > 0) {
-            value
-        } else {
-            -value
-        }
-    }
-
-    fun nextPositiveLong(): Long {
-        val value = nextLong()
-        return if (value > 0) {
-            value
-        } else {
-            -value
-        }
-    }
-
-    @OptIn(ExperimentalForeignApi::class)
-    actual fun nextBytes(output: ByteArray) {
-        if (output.isEmpty()) return
-        val fd = open("/dev/urandom", O_RDONLY)
-        if (fd == -1) {
-            throw IllegalStateException("Failed to open /dev/urandom")
-        }
-        try {
-            output.usePinned { pinned ->
-                var bytesRead = 0
-                while (bytesRead < output.size) {
-                    val result = read(fd, pinned.addressOf(bytesRead), (output.size - bytesRead).convert())
-                    if (result <= 0) {
-                        throw IllegalStateException("Failed to read from /dev/urandom")
-                    }
-                    bytesRead += result.toInt()
+            when (val error = errno) {
+                EINTR -> continue
+                ENOSYS, EPERM -> {
+                    getrandomUnavailable = true
+                    return readUrandom(pinned, filled, output.size)
                 }
+                else -> throw IllegalStateException("getrandom failed with errno $error")
             }
-        } finally {
-            close(fd)
         }
+    }
+}
+
+/** Set once `getrandom` is known not to work here, so later calls skip straight to `/dev/urandom`. */
+@Volatile
+private var getrandomUnavailable = false
+
+/** Fills `pinned[from until to]` from `/dev/urandom`, where `getrandom` is unavailable. */
+@OptIn(ExperimentalForeignApi::class)
+private fun readUrandom(
+    pinned: Pinned<ByteArray>,
+    from: Int,
+    to: Int,
+) {
+    val fd = open("/dev/urandom", O_RDONLY or O_CLOEXEC)
+    if (fd == -1) throw IllegalStateException("Failed to open /dev/urandom: errno $errno")
+    try {
+        var filled = from
+        while (filled < to) {
+            val result = read(fd, pinned.addressOf(filled), (to - filled).convert())
+            when {
+                result > 0 -> filled += result.toInt()
+                result < 0 && errno == EINTR -> continue
+                else -> throw IllegalStateException("Failed to read /dev/urandom: errno $errno")
+            }
+        }
+    } finally {
+        close(fd)
     }
 }

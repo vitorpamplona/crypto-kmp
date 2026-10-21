@@ -1,0 +1,268 @@
+public final class com/vitorpamplona/crypto/ConstantTimeKt {
+	public static final fun equalsConstantTime ([B[B)Z
+}
+
+public abstract interface class com/vitorpamplona/crypto/SymmetricCipher {
+	public abstract fun decrypt ([B)[B
+	public abstract fun decryptOrNull ([B)[B
+	public abstract fun encrypt ([B)[B
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/aes/AESCBC : com/vitorpamplona/crypto/SymmetricCipher {
+	public fun <init> ()V
+	public fun <init> ([B[B)V
+	public synthetic fun <init> ([B[BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun decrypt ([B)[B
+	public fun decryptOrNull ([B)[B
+	public fun encrypt ([B)[B
+	public final fun getIv ()[B
+	public final fun getKeyBytes ()[B
+	public fun name ()Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/aes/AESCBCKt {
+	public static final field AES_CBC_NAME Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/aes/AESGCM : com/vitorpamplona/crypto/SymmetricCipher {
+	public fun <init> ()V
+	public fun <init> ([B[B)V
+	public synthetic fun <init> ([B[BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun decrypt ([B)[B
+	public final fun decrypt ([B[B)[B
+	public fun decryptOrNull ([B)[B
+	public final fun decryptOrNull ([B[B)[B
+	public fun encrypt ([B)[B
+	public final fun encrypt ([B[B)[B
+	public final fun getKeyBytes ()[B
+	public final fun getNonce ()[B
+	public fun name ()Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/aes/AESGCMKt {
+	public static final field AES_GCM_NAME Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/chacha/ChaCha20 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/chacha/ChaCha20;
+	public final fun decrypt ([B[B[B)[B
+	public final fun encrypt ([B[B[B)[B
+}
+
+public final class com/vitorpamplona/crypto/chacha/ChaCha20Core {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/chacha/ChaCha20Core;
+	public final fun chaCha20Block ([BI[B)[B
+	public final fun chaCha20Xor ([B[B[BI)[B
+	public static synthetic fun chaCha20Xor$default (Lcom/vitorpamplona/crypto/chacha/ChaCha20Core;[B[B[BIILjava/lang/Object;)[B
+	public final fun hChaCha20 ([B[B)[B
+	public final fun xChaCha20Xor ([B[B[B)[B
+}
+
+public final class com/vitorpamplona/crypto/chacha/ChaCha20Poly1305 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/chacha/ChaCha20Poly1305;
+	public final fun decrypt ([B[B[B[B)[B
+	public final fun decryptOrNull ([B[B[B[B)[B
+	public final fun encrypt ([B[B[B[B)[B
+}
+
+public final class com/vitorpamplona/crypto/chacha/Poly1305 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/chacha/Poly1305;
+	public final fun mac ([B[B)[B
+}
+
+public final class com/vitorpamplona/crypto/chacha/XChaCha20Poly1305 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/chacha/XChaCha20Poly1305;
+	public final fun decrypt ([B[B[B[B)[B
+	public final fun decryptOrNull ([B[B[B[B)[B
+	public final fun encrypt ([B[B[B[B)[B
+}
+
+public final class com/vitorpamplona/crypto/curve25519/Ed25519 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/curve25519/Ed25519;
+	public final fun generateKeyPair ()Lcom/vitorpamplona/crypto/curve25519/Ed25519KeyPair;
+	public final fun keyPairFromSeed ([B)Lcom/vitorpamplona/crypto/curve25519/Ed25519KeyPair;
+	public final fun publicFromPrivate ([B)[B
+	public final fun sign ([B[B)[B
+	public final fun verify ([B[B[B)Z
+}
+
+public final class com/vitorpamplona/crypto/curve25519/Ed25519KeyPair {
+	public fun <init> ([B[B)V
+	public final fun component1 ()[B
+	public final fun component2 ()[B
+	public final fun copy ([B[B)Lcom/vitorpamplona/crypto/curve25519/Ed25519KeyPair;
+	public static synthetic fun copy$default (Lcom/vitorpamplona/crypto/curve25519/Ed25519KeyPair;[B[BILjava/lang/Object;)Lcom/vitorpamplona/crypto/curve25519/Ed25519KeyPair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPrivateKey ()[B
+	public final fun getPublicKey ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/curve25519/X25519 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/curve25519/X25519;
+	public final fun dh ([B[B)[B
+	public final fun generateKeyPair ()Lcom/vitorpamplona/crypto/curve25519/X25519KeyPair;
+	public final fun publicFromPrivate ([B)[B
+}
+
+public final class com/vitorpamplona/crypto/curve25519/X25519KeyPair {
+	public fun <init> ([B[B)V
+	public final fun component1 ()[B
+	public final fun component2 ()[B
+	public final fun copy ([B[B)Lcom/vitorpamplona/crypto/curve25519/X25519KeyPair;
+	public static synthetic fun copy$default (Lcom/vitorpamplona/crypto/curve25519/X25519KeyPair;[B[BILjava/lang/Object;)Lcom/vitorpamplona/crypto/curve25519/X25519KeyPair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPrivateKey ()[B
+	public final fun getPublicKey ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/vitorpamplona/crypto/digest/Digest {
+	public abstract fun doFinal ([BI)I
+	public abstract fun getAlgorithmName ()Ljava/lang/String;
+	public abstract fun getDigestSize ()I
+	public abstract fun reset ()V
+	public abstract fun update (B)V
+	public abstract fun update ([BII)V
+}
+
+public final class com/vitorpamplona/crypto/digest/DigestInstance {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun digest ()[B
+	public final fun digest ([B)[B
+	public final fun update (B)V
+	public final fun update ([B)V
+}
+
+public abstract class com/vitorpamplona/crypto/digest/GeneralDigest : com/vitorpamplona/crypto/digest/Digest {
+	protected fun <init> ()V
+	protected fun <init> (Lcom/vitorpamplona/crypto/digest/GeneralDigest;)V
+	protected final fun copyIn (Lcom/vitorpamplona/crypto/digest/GeneralDigest;)V
+	protected final fun finish ()V
+	protected abstract fun processBlock ()V
+	protected abstract fun processLength (J)V
+	protected abstract fun processWord ([BI)V
+	public fun reset ()V
+	public fun update (B)V
+	public fun update ([BII)V
+}
+
+public final class com/vitorpamplona/crypto/digest/KeccakDigest : com/vitorpamplona/crypto/digest/Digest {
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/vitorpamplona/crypto/digest/KeccakDigest;)V
+	public fun doFinal ([BI)I
+	public fun getAlgorithmName ()Ljava/lang/String;
+	public fun getDigestSize ()I
+	public fun reset ()V
+	public fun update (B)V
+	public fun update ([BII)V
+}
+
+public final class com/vitorpamplona/crypto/digest/RIPEMD160Digest : com/vitorpamplona/crypto/digest/GeneralDigest {
+	public fun <init> ()V
+	public fun <init> (Lcom/vitorpamplona/crypto/digest/RIPEMD160Digest;)V
+	public fun doFinal ([BI)I
+	public fun getAlgorithmName ()Ljava/lang/String;
+	public fun getDigestSize ()I
+	public fun reset ()V
+}
+
+public final class com/vitorpamplona/crypto/kdf/Hkdf {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun expand ([B[BI)[B
+	public final fun expandLabel ([BLjava/lang/String;[BI)[B
+	public final fun extract ([B[B)[B
+	public final fun extract ([B[B[B)[B
+	public final fun getAlgorithm ()Ljava/lang/String;
+	public final fun getHashLen ()I
+}
+
+public final class com/vitorpamplona/crypto/mac/MacInstance {
+	public fun <init> (Ljava/lang/String;[B)V
+	public final fun doFinal ()[B
+	public final fun doFinal ([BI)V
+	public static synthetic fun doFinal$default (Lcom/vitorpamplona/crypto/mac/MacInstance;[BIILjava/lang/Object;)V
+	public final fun getMacLength ()I
+	public final fun init ([BLjava/lang/String;)V
+	public final fun update (B)V
+	public final fun update ([B)V
+}
+
+public final class com/vitorpamplona/crypto/random/RandomInstance {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/random/RandomInstance;
+	public final fun bytes (I)[B
+	public final fun getCharPool ()Ljava/util/List;
+	public final fun int ()I
+	public final fun int (I)I
+	public final fun long ()J
+	public final fun long (J)J
+	public final fun randomChar ()C
+	public final fun randomChars (I)Ljava/lang/String;
+	public static synthetic fun randomChars$default (Lcom/vitorpamplona/crypto/random/RandomInstance;IILjava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/vitorpamplona/crypto/random/SecureRandom {
+	public fun <init> ()V
+	public final fun nextBytes ([B)V
+	public final fun nextInt ()I
+	public final fun nextInt (I)I
+	public final fun nextLong ()J
+	public final fun nextLong (J)J
+}
+
+public final class com/vitorpamplona/crypto/sha2/CountingInputStream : java/io/FilterInputStream {
+	public fun <init> (Ljava/io/InputStream;)V
+	public final fun getBytesRead ()J
+	public fun read ()I
+	public fun read ([BII)I
+	public fun skip (J)J
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha256Hasher {
+	public fun <init> ()V
+	public final fun digest ()[B
+	public final fun digest ([B)[B
+	public final fun hash ([B)[B
+	public final fun hashStream (Ljava/io/InputStream;I)[B
+	public static synthetic fun hashStream$default (Lcom/vitorpamplona/crypto/sha2/Sha256Hasher;Ljava/io/InputStream;IILjava/lang/Object;)[B
+	public final fun reset ()V
+	public final fun update ([BII)V
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha256Midstate {
+	public static final field BLOCK I
+	public static final field Companion Lcom/vitorpamplona/crypto/sha2/Sha256Midstate$Companion;
+	public fun <init> ([BI)V
+	public final fun digestInto ([B)[B
+	public final fun getPrefixLength ()I
+	public final fun getTail ()[B
+	public final fun hasLeadingZeroBits (I)Z
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha256Midstate$Companion {
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha256Pool {
+	public fun <init> (I)V
+	public final fun acquire ()Lcom/vitorpamplona/crypto/sha2/Sha256Hasher;
+	public final fun hash ([B)[B
+	public final fun hashStream (Ljava/io/InputStream;I)[B
+	public static synthetic fun hashStream$default (Lcom/vitorpamplona/crypto/sha2/Sha256Pool;Ljava/io/InputStream;IILjava/lang/Object;)[B
+	public final fun hasher (Lkotlin/jvm/functions/Function1;)[B
+	public final fun release (Lcom/vitorpamplona/crypto/sha2/Sha256Hasher;)V
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha256_jvmAndroidKt {
+	public static final fun sha256 ([B)[B
+	public static final fun sha256Into ([B[BI)[B
+	public static synthetic fun sha256Into$default ([B[BIILjava/lang/Object;)[B
+	public static final fun sha256StreamWithCount (Ljava/io/InputStream;I)Lkotlin/Pair;
+	public static synthetic fun sha256StreamWithCount$default (Ljava/io/InputStream;IILjava/lang/Object;)Lkotlin/Pair;
+}
+

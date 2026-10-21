@@ -28,20 +28,25 @@ import java.security.MessageDigest
  *
  * The previous ArrayBlockingQueue pool added ~10µs of synchronization overhead per call
  * (lock acquire + release) for ~2µs of actual hashing. ThreadLocal eliminates all locking
- * since each thread gets its own MessageDigest instance. digest() implicitly resets state.
+ * since each thread gets its own MessageDigest instance. digest() implicitly resets state,
+ * and every path that can fail halfway resets it explicitly, so a digest is never handed
+ * to the next caller on the thread with data already in it.
  */
-val threadLocalDigest: ThreadLocal<MessageDigest> =
+private val threadLocalDigest: ThreadLocal<MessageDigest> =
     ThreadLocal.withInitial {
         MessageDigest.getInstance("SHA-256")
     }
 
-actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get()!!.digest(data)
+public actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get()!!.digest(data)
 
-actual fun sha256Into(
+public actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,
 ): ByteArray {
+    // Checked before the digest sees any data: with these in range, neither call below can
+    // throw, so a failure never leaves the thread's digest half-fed.
+    checkSha256IntoArgs(out, data, len)
     val md = threadLocalDigest.get()!!
     md.update(data, 0, len)
     md.digest(out, 0, 32)
@@ -53,11 +58,13 @@ actual fun sha256Into(
  * Returns both the hash and the number of bytes processed.
  * This is more efficient than reading the stream twice.
  *
+ * Errors from the stream propagate unchanged; the digest is reset either way.
+ *
  * @param inputStream The input stream to hash
  * @param bufferSize Size of chunks to read (default 8KB)
  * @return Pair of (hash bytes, bytes read count)
  */
-fun sha256StreamWithCount(
+public fun sha256StreamWithCount(
     inputStream: InputStream,
     bufferSize: Int = 8192,
 ): Pair<ByteArray, Long> {
@@ -70,8 +77,8 @@ fun sha256StreamWithCount(
             digest.update(buffer, 0, bytesRead)
         }
         return Pair(digest.digest(), countingStream.bytesRead)
-    } catch (e: Exception) {
-        digest.reset() // Clean up state on failure
-        throw e
+    } finally {
+        // digest() already reset it on success; this covers a stream that threw halfway.
+        digest.reset()
     }
 }

@@ -20,22 +20,33 @@
  */
 package com.vitorpamplona.crypto.digest
 
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.digests.KeccakDigest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
+ */
+
 /**
+ * The original Keccak hash, as submitted to the SHA-3 competition; Keccak-256 is the
+ * size in common use. Not FIPS 202 SHA-3, which pads differently and so gives
+ * different digests for the same input.
+ *
  * Implementation of Keccak based on following KeccakNISTInterface.c from http://keccak.noekeon.org/
  *
- *
  * Following the naming conventions used in the C source code to enable easy review of the implementation.
+ *
+ * Ported from Bouncy Castle's `KeccakDigest` (MIT).
  */
-class KeccakDigest : ExtendedDigest {
-    var state: ByteArray = ByteArray((1600 / 8))
-    var dataQueue: ByteArray = ByteArray((1536 / 8))
-    var rate: Int = 0
-    var bitsInQueue: Int = 0
-    var fixedOutputLength: Int = 0
-    var squeezing: Boolean = false
-    var bitsAvailableForSqueezing: Int = 0
-    var chunk: ByteArray = byteArrayOf()
-    var oneByte: ByteArray = byteArrayOf()
+public class KeccakDigest : Digest {
+    private var state: ByteArray = ByteArray((1600 / 8))
+    private var dataQueue: ByteArray = ByteArray((1536 / 8))
+    private var rate: Int = 0
+    private var bitsInQueue: Int = 0
+    private var fixedOutputLength: Int = 0
+    private var squeezing: Boolean = false
+    private var bitsAvailableForSqueezing: Int = 0
+    private var chunk: ByteArray = byteArrayOf()
+    private var oneByte: ByteArray = byteArrayOf()
 
     private fun clearDataQueueSection(
         off: Int,
@@ -46,11 +57,16 @@ class KeccakDigest : ExtendedDigest {
         }
     }
 
-    constructor(bitLength: Int = 288) {
+    /**
+     * Keccak with a [bitLength]-bit digest: 224, 256, 384 or 512 (and the non-standard
+     * 128 and 288). Defaults to Keccak-256.
+     */
+    public constructor(bitLength: Int = 256) {
         init(bitLength)
     }
 
-    constructor(source: KeccakDigest) {
+    /** A copy of [source] in its current state, to continue a shared prefix with different suffixes. */
+    public constructor(source: KeccakDigest) {
         source.state.copyInto(this.state, 0, 0, source.state.size)
         source.dataQueue.copyInto(this.dataQueue, 0, 0, source.dataQueue.size)
         this.rate = source.rate
@@ -77,6 +93,9 @@ class KeccakDigest : ExtendedDigest {
         inOff: Int,
         len: Int,
     ) {
+        require(inOff >= 0 && len >= 0 && len <= `in`.size - inOff) {
+            "range [$inOff, $inOff + $len) is outside an array of ${`in`.size}"
+        }
         absorb(`in`, inOff, len * 8L)
     }
 
@@ -84,26 +103,8 @@ class KeccakDigest : ExtendedDigest {
         out: ByteArray,
         outOff: Int,
     ): Int {
-        squeeze(out, outOff, fixedOutputLength.toLong())
-        reset()
-
-        return getDigestSize()
-    }
-
-    /*
-     * TODO Possible API change to support partial-byte suffixes.
-     */
-    fun doFinal(
-        out: ByteArray,
-        outOff: Int,
-        partialByte: Byte,
-        partialBits: Int,
-    ): Int {
-        if (partialBits > 0) {
-            oneByte[0] = partialByte
-            absorb(oneByte, 0, partialBits.toLong())
-        }
-
+        // Checked before squeezing, so a short buffer leaves the message in progress intact.
+        require(outOff >= 0 && getDigestSize() <= out.size - outOff) { "no room for a ${getDigestSize()}-byte digest" }
         squeeze(out, outOff, fixedOutputLength.toLong())
         reset()
 
@@ -113,13 +114,6 @@ class KeccakDigest : ExtendedDigest {
     override fun reset() {
         init(fixedOutputLength)
     }
-
-    /**
-     * Return the size of block that the compression function is applied to in bytes.
-     *
-     * @return internal byte length of a block.
-     */
-    override fun getByteLength(): Int = rate / 8
 
     private fun init(bitLength: Int) {
         when (bitLength) {
@@ -159,7 +153,7 @@ class KeccakDigest : ExtendedDigest {
         bitsInQueue = 0
     }
 
-    fun absorb(
+    private fun absorb(
         data: ByteArray,
         off: Int,
         databitlen: Long,
@@ -195,11 +189,9 @@ class KeccakDigest : ExtendedDigest {
 
                 i += wholeBlocks * rate
             } else {
-                var partialBlock = (databitlen - i).toInt()
-
-                if (partialBlock + bitsInQueue > rate) {
-                    partialBlock = rate - bitsInQueue
-                }
+                // At most the room left in the queue, computed in Long: the bits still to
+                // absorb can exceed Int.MAX_VALUE for inputs past 256 MiB.
+                var partialBlock = minOf(databitlen - i, (rate - bitsInQueue).toLong()).toInt()
 
                 val partialByte = partialBlock % 8
                 partialBlock -= partialByte
@@ -258,7 +250,7 @@ class KeccakDigest : ExtendedDigest {
         squeezing = true
     }
 
-    fun squeeze(
+    private fun squeeze(
         output: ByteArray,
         offset: Int,
         outputLength: Long,
@@ -386,7 +378,7 @@ class KeccakDigest : ExtendedDigest {
         }
     }
 
-    var cArray: LongArray = LongArray(5)
+    private val cArray: LongArray = LongArray(5)
 
     private fun theta(array: LongArray) {
         for (x in 0..4) {
@@ -416,7 +408,7 @@ class KeccakDigest : ExtendedDigest {
         }
     }
 
-    var tempA: LongArray = LongArray(25)
+    private val tempA: LongArray = LongArray(25)
 
     private fun pi(array: LongArray) {
         array.copyInto(tempA, 0, 0, tempA.size)
@@ -428,7 +420,7 @@ class KeccakDigest : ExtendedDigest {
         }
     }
 
-    var chiC: LongArray = LongArray(5)
+    private val chiC: LongArray = LongArray(5)
 
     private fun chi(array: LongArray) {
         for (y in 0..4) {
@@ -474,7 +466,7 @@ class KeccakDigest : ExtendedDigest {
         byteState.copyInto(data, 0, 0, laneCount * 8)
     }
 
-    companion object {
+    private companion object {
         private val KeccakRoundConstants: LongArray = keccakInitializeRoundConstants()
 
         private val KeccakRhoOffsets: IntArray = keccakInitializeRhoOffsets()

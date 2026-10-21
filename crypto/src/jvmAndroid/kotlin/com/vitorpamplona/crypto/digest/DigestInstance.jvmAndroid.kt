@@ -21,17 +21,43 @@
 package com.vitorpamplona.crypto.digest
 
 import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 
-actual class DigestInstance actual constructor(
+/** SHA-1 and SHA-2 on JCA; RIPEMD-160, which the default JDK providers lack, in Kotlin. */
+public actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
-    val digest: MessageDigest = MessageDigest.getInstance(algorithm)
+    private val digest: StreamingDigest =
+        when (val known = DigestAlgorithm.of(algorithm)) {
+            DigestAlgorithm.RIPEMD_160 -> kotlinStreamingDigest(known)
+            else -> JcaStreamingDigest(known.jcaName)
+        }
 
-    actual fun update(array: ByteArray) = digest.update(array)
+    public actual fun update(array: ByteArray): Unit = digest.update(array)
 
-    actual fun update(byte: Byte) = digest.update(byte)
+    public actual fun update(byte: Byte): Unit = digest.update(byte)
 
-    actual fun digest(): ByteArray = digest.digest()
+    public actual fun digest(): ByteArray = digest.digest()
 
-    actual fun digest(input: ByteArray): ByteArray = digest.digest(input)
+    public actual fun digest(input: ByteArray): ByteArray {
+        digest.update(input)
+        return digest.digest()
+    }
+}
+
+private class JcaStreamingDigest(
+    jcaName: String,
+) : StreamingDigest {
+    private val md =
+        try {
+            MessageDigest.getInstance(jcaName)
+        } catch (e: NoSuchAlgorithmException) {
+            throw IllegalArgumentException("Unsupported digest algorithm: $jcaName", e)
+        }
+
+    override fun update(array: ByteArray) = md.update(array)
+
+    override fun update(byte: Byte) = md.update(byte)
+
+    override fun digest(): ByteArray = md.digest()
 }

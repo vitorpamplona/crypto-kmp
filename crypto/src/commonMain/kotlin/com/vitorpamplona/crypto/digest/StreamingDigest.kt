@@ -20,12 +20,31 @@
  */
 package com.vitorpamplona.crypto.digest
 
-import com.vitorpamplona.crypto.digest.RIPEMD160Digest
 import com.vitorpamplona.crypto.sha2.Sha1Digest
 import com.vitorpamplona.crypto.sha2.Sha256Digest
+import com.vitorpamplona.crypto.sha2.Sha512Digest
 import com.vitorpamplona.crypto.sha2.ShaDigest
 
-/** What a native [DigestInstance] drives, so each algorithm is picked once, at construction. */
+/** The algorithms [DigestInstance] supports: the same set, under the same names, on every platform. */
+internal enum class DigestAlgorithm(
+    val jcaName: String,
+    private val alias: String,
+) {
+    SHA_1("SHA-1", "SHA1"),
+    SHA_256("SHA-256", "SHA256"),
+    SHA_512("SHA-512", "SHA512"),
+    RIPEMD_160("RIPEMD-160", "RIPEMD160"),
+    ;
+
+    companion object {
+        /** Looks [name] up ignoring case, or throws [IllegalArgumentException]. */
+        fun of(name: String): DigestAlgorithm =
+            entries.firstOrNull { it.jcaName.equals(name, ignoreCase = true) || it.alias.equals(name, ignoreCase = true) }
+                ?: throw IllegalArgumentException("Unsupported digest algorithm: $name. Use SHA-1, SHA-256, SHA-512 or RIPEMD-160.")
+    }
+}
+
+/** What a [DigestInstance] drives, so each algorithm is picked once, at construction. */
 internal interface StreamingDigest {
     fun update(array: ByteArray)
 
@@ -35,19 +54,13 @@ internal interface StreamingDigest {
     fun digest(): ByteArray
 }
 
-/** The pure-Kotlin digests every native target can fall back on. */
-internal fun kotlinStreamingDigest(algorithm: String): StreamingDigest =
+/** The pure-Kotlin digests: all of them on Linux, and whatever the platform lacks elsewhere. */
+internal fun kotlinStreamingDigest(algorithm: DigestAlgorithm): StreamingDigest =
     when (algorithm) {
-        "SHA-256" -> ShaStreamingDigest(Sha256Digest())
-
-        "SHA-1" -> ShaStreamingDigest(Sha1Digest())
-
-        "ripemd160" -> Ripemd160StreamingDigest()
-
-        // Adding this below as a reminder.
-        "keccak256" -> error("KECCAK-256 is not yet supported.")
-
-        else -> error("This message digest is not supported.")
+        DigestAlgorithm.SHA_1 -> ShaStreamingDigest(Sha1Digest())
+        DigestAlgorithm.SHA_256 -> ShaStreamingDigest(Sha256Digest())
+        DigestAlgorithm.SHA_512 -> ShaStreamingDigest(Sha512Digest())
+        DigestAlgorithm.RIPEMD_160 -> Ripemd160StreamingDigest()
     }
 
 private class ShaStreamingDigest(

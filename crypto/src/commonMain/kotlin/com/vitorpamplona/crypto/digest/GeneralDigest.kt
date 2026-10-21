@@ -20,19 +20,19 @@
  */
 package com.vitorpamplona.crypto.digest
 
-import com.vitorpamplona.crypto.digest.Pack.bigEndianToInt
-import com.vitorpamplona.crypto.digest.Pack.bigEndianToLong
-import com.vitorpamplona.crypto.digest.Pack.intToBigEndian
-import com.vitorpamplona.crypto.digest.Pack.longToBigEndian
-import kotlin.math.max
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.digests.GeneralDigest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
+ */
 
 /**
  * Base implementation of MD4 family style digest as outlined in
  * "Handbook of Applied Cryptography", pages 344 - 347.
+ *
+ * Ported from Bouncy Castle's `GeneralDigest` (MIT).
  */
-abstract class GeneralDigest :
-    ExtendedDigest,
-    Memoable {
+public abstract class GeneralDigest : Digest {
     private val xBuf = ByteArray(4)
     private var xBufOff = 0
 
@@ -46,20 +46,13 @@ abstract class GeneralDigest :
     }
 
     /**
-     * Copy constructor. We are using copy constructors in place
-     * of the Object.clone() interface as this interface is not
-     * supported by J2ME.
+     * Copy constructor: starts where [t] is, so a digest of a shared prefix can be
+     * continued with different suffixes.
      *
      * @param t the GeneralDigest
      */
     protected constructor(t: GeneralDigest) {
         copyIn(t)
-    }
-
-    protected constructor(encodedState: ByteArray) {
-        encodedState.copyInto(xBuf, 0, 0, xBuf.size)
-        xBufOff = bigEndianToInt(encodedState, 4)
-        byteCount = bigEndianToLong(encodedState, 8)
     }
 
     protected fun copyIn(t: GeneralDigest) {
@@ -85,8 +78,9 @@ abstract class GeneralDigest :
         inOff: Int,
         len: Int,
     ) {
-        var len = len
-        len = max(0, len)
+        require(inOff >= 0 && len >= 0 && len <= `in`.size - inOff) {
+            "range [$inOff, $inOff + $len) is outside an array of ${`in`.size}"
+        }
 
         //
         // fill the current word
@@ -125,7 +119,8 @@ abstract class GeneralDigest :
         byteCount += len.toLong()
     }
 
-    fun finish() {
+    /** Appends the padding and the length; the subclass then writes out its state. */
+    protected fun finish() {
         val bitLength = (byteCount shl 3)
 
         //
@@ -151,14 +146,6 @@ abstract class GeneralDigest :
         }
     }
 
-    protected fun populateState(state: ByteArray) {
-        xBuf.copyInto(state, 0, 0, xBufOff)
-        intToBigEndian(xBufOff, state, 4)
-        longToBigEndian(byteCount, state, 8)
-    }
-
-    override fun getByteLength(): Int = BYTE_LENGTH
-
     protected abstract fun processWord(
         `in`: ByteArray,
         inOff: Int,
@@ -167,8 +154,4 @@ abstract class GeneralDigest :
     protected abstract fun processLength(bitLength: Long)
 
     protected abstract fun processBlock()
-
-    companion object {
-        private const val BYTE_LENGTH = 64
-    }
 }

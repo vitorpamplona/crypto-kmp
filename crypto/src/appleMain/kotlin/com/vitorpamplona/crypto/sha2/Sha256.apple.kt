@@ -28,7 +28,7 @@ import platform.CoreCrypto.CC_SHA256
 import platform.CoreCrypto.CC_SHA256_DIGEST_LENGTH
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun sha256(data: ByteArray): ByteArray {
+public actual fun sha256(data: ByteArray): ByteArray {
     val digest = UByteArray(CC_SHA256_DIGEST_LENGTH)
 
     data.usePinned { inputPinned ->
@@ -46,16 +46,18 @@ actual fun sha256(data: ByteArray): ByteArray {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun sha256Into(
+public actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,
 ): ByteArray {
+    // CC_SHA256 trusts len and writes 32 bytes blindly, so the bounds are checked here.
+    checkSha256IntoArgs(out, data, len)
     data.usePinned { inputPinned ->
         out.asUByteArray().usePinned { digestPinned ->
             CC_SHA256(
                 // addressOf(0) throws on an empty array; CommonCrypto accepts null for a 0-byte input.
-                if (data.isEmpty()) null else inputPinned.addressOf(0),
+                if (len == 0) null else inputPinned.addressOf(0),
                 len.convert(),
                 digestPinned.addressOf(0),
             )

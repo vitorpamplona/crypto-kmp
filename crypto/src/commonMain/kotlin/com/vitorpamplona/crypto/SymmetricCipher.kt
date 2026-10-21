@@ -20,12 +20,37 @@
  */
 package com.vitorpamplona.crypto
 
-interface SymmetricCipher {
-    fun name(): String
+/**
+ * A symmetric cipher bound to one key and one nonce or IV, both fixed for the instance's life.
+ *
+ * Because the nonce is fixed, [encrypt] can be single-use: an implementation for which a reused
+ * nonce is catastrophic, like [com.vitorpamplona.crypto.aes.AESGCM], throws
+ * [IllegalStateException] on a second [encrypt]. Create one instance, with a fresh nonce, per
+ * message. [decrypt] and [decryptOrNull] can always be called any number of times.
+ */
+public interface SymmetricCipher {
+    /** A short name for the algorithm, such as `aes-gcm`. */
+    public fun name(): String
 
-    fun encrypt(bytesToEncrypt: ByteArray): ByteArray
+    public fun encrypt(bytesToEncrypt: ByteArray): ByteArray
 
-    fun decrypt(bytesToDecrypt: ByteArray): ByteArray
+    /**
+     * Throws [IllegalArgumentException] when [bytesToDecrypt] does not authenticate, has bad
+     * padding, or has a length the cipher cannot have produced.
+     */
+    public fun decrypt(bytesToDecrypt: ByteArray): ByteArray
 
-    fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
+    /** [decrypt], returning null in exactly the cases where it would throw. */
+    public fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
 }
+
+/**
+ * Runs a decryption, mapping the failures every [SymmetricCipher.decrypt] reports with
+ * [IllegalArgumentException] to null: the one shared body of every `decryptOrNull`.
+ */
+internal inline fun nullOnDecryptFailure(decryption: () -> ByteArray): ByteArray? =
+    try {
+        decryption()
+    } catch (_: IllegalArgumentException) {
+        null
+    }

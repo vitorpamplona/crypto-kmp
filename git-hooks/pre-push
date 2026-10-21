@@ -9,11 +9,11 @@ echo "*********************************************************"
 echo ""
 echo "Java Version: "
 echo "$JAVA_HOME"
-echo "$(java -version)"
+java -version
 echo "Running test... "
 
 # The same checks as CI's build job. The Apple tests need a Mac; CI's test-apple job runs them.
-./gradlew spotlessCheck :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:compileAppleMainKotlinMetadata
+./gradlew spotlessCheck :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:compileAppleMainKotlinMetadata
 
 status=$?
 
@@ -23,7 +23,7 @@ if [ "$status" = 0 ] ; then
 else
     echo "*********************************************************"
     echo 1>&2 "Formatting or tests failed"
-    printf "Run ${GREEN}./gradlew spotlessApply :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test${NO_COLOR}\n"
+    printf "Run ${GREEN}./gradlew spotlessApply :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test${NO_COLOR}\n"
     printf "and ${GREEN}./gradlew :crypto:compileAppleMainKotlinMetadata${NO_COLOR}, and fix what fails before pushing...\n"
     echo "*********************************************************"
     exit 1

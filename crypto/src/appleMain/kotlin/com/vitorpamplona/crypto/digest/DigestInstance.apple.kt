@@ -39,28 +39,34 @@ import platform.CoreCrypto.CC_SHA256_DIGEST_LENGTH
 import platform.CoreCrypto.CC_SHA256_Final
 import platform.CoreCrypto.CC_SHA256_Init
 import platform.CoreCrypto.CC_SHA256_Update
+import platform.CoreCrypto.CC_SHA512_CTX
+import platform.CoreCrypto.CC_SHA512_DIGEST_LENGTH
+import platform.CoreCrypto.CC_SHA512_Final
+import platform.CoreCrypto.CC_SHA512_Init
+import platform.CoreCrypto.CC_SHA512_Update
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.ref.Cleaner
 import kotlin.native.ref.createCleaner
 
-/** SHA-1 and SHA-256 on CommonCrypto (hardware-accelerated); RIPEMD-160 in Kotlin. */
-actual class DigestInstance actual constructor(
+/** SHA-1 and SHA-2 on CommonCrypto (hardware-accelerated); RIPEMD-160 in Kotlin. */
+public actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
     private val digest: StreamingDigest =
-        when (algorithm) {
-            "SHA-256" -> CommonCryptoSha256()
-            "SHA-1" -> CommonCryptoSha1()
-            else -> kotlinStreamingDigest(algorithm)
+        when (val known = DigestAlgorithm.of(algorithm)) {
+            DigestAlgorithm.SHA_256 -> CommonCryptoSha256()
+            DigestAlgorithm.SHA_1 -> CommonCryptoSha1()
+            DigestAlgorithm.SHA_512 -> CommonCryptoSha512()
+            DigestAlgorithm.RIPEMD_160 -> kotlinStreamingDigest(known)
         }
 
-    actual fun update(array: ByteArray) = digest.update(array)
+    public actual fun update(array: ByteArray): Unit = digest.update(array)
 
-    actual fun update(byte: Byte) = digest.update(byte)
+    public actual fun update(byte: Byte): Unit = digest.update(byte)
 
-    actual fun digest(): ByteArray = digest.digest()
+    public actual fun digest(): ByteArray = digest.digest()
 
-    actual fun digest(input: ByteArray): ByteArray {
+    public actual fun digest(input: ByteArray): ByteArray {
         digest.update(input)
         return digest.digest()
     }
@@ -115,6 +121,32 @@ private class CommonCryptoSha1 : StreamingDigest {
         val out = UByteArray(CC_SHA1_DIGEST_LENGTH)
         out.usePinned { CC_SHA1_Final(it.addressOf(0), context) }
         CC_SHA1_Init(context)
+        return out.toByteArray()
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+private class CommonCryptoSha512 : StreamingDigest {
+    private val context: CPointer<CC_SHA512_CTX> = nativeHeap.alloc<CC_SHA512_CTX>().ptr
+
+    @Suppress("unused")
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
+
+    init {
+        CC_SHA512_Init(context)
+    }
+
+    override fun update(array: ByteArray) {
+        if (array.isEmpty()) return
+        array.usePinned { CC_SHA512_Update(context, it.addressOf(0), array.size.convert()) }
+    }
+
+    override fun update(byte: Byte) = update(byteArrayOf(byte))
+
+    override fun digest(): ByteArray {
+        val out = UByteArray(CC_SHA512_DIGEST_LENGTH)
+        out.usePinned { CC_SHA512_Final(it.addressOf(0), context) }
+        CC_SHA512_Init(context)
         return out.toByteArray()
     }
 }

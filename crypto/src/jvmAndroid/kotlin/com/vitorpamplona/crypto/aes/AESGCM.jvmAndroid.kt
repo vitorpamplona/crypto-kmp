@@ -21,63 +21,70 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.nullOnDecryptFailure
 import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-actual class AESGCM actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val nonce: ByteArray,
+public actual class AESGCM actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val nonce: ByteArray,
 ) : SymmetricCipher {
-    private fun newCipher() = Cipher.getInstance("AES/GCM/NoPadding")
+    init {
+        requireAesKey(keyBytes)
+        requireGcmNonce(nonce)
+    }
 
-    private fun keySpec() = SecretKeySpec(keyBytes, "AES")
+    // Both copy their arrays, so later changes to keyBytes or nonce don't reach this instance.
+    private val keySpec = SecretKeySpec(keyBytes, "AES")
+    private val param = GCMParameterSpec(AesGcmKey.TAG_LENGTH * 8, nonce)
 
-    private fun param() = GCMParameterSpec(128, nonce)
+    private val guard = NonceGuard()
 
-    actual override fun name() = NAME
-
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(newCipher()) {
-            init(Cipher.ENCRYPT_MODE, keySpec(), param())
-            doFinal(bytesToEncrypt)
-        }
-
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(newCipher()) {
-            init(Cipher.DECRYPT_MODE, keySpec(), param())
-            doFinal(bytesToDecrypt)
-        }
-
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
-        try {
-            decrypt(bytesToDecrypt)
-        } catch (_: GeneralSecurityException) {
-            null
-        }
-
-    actual fun encrypt(
-        bytesToEncrypt: ByteArray,
+    private fun crypt(
+        mode: Int,
+        input: ByteArray,
         aad: ByteArray,
     ): ByteArray =
-        with(newCipher()) {
-            init(Cipher.ENCRYPT_MODE, keySpec(), param())
+        with(Cipher.getInstance("AES/GCM/NoPadding")) {
+            init(mode, keySpec, param)
             updateAAD(aad)
-            doFinal(bytesToEncrypt)
+            doFinal(input)
         }
 
-    actual fun decrypt(
+    actual override fun name(): String = AES_GCM_NAME
+
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = encrypt(bytesToEncrypt, EMPTY)
+
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = decrypt(bytesToDecrypt, EMPTY)
+
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = decryptOrNull(bytesToDecrypt, EMPTY)
+
+    public actual fun encrypt(
+        bytesToEncrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray {
+        guard.claim()
+        return crypt(Cipher.ENCRYPT_MODE, bytesToEncrypt, aad)
+    }
+
+    public actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray =
-        with(newCipher()) {
-            init(Cipher.DECRYPT_MODE, keySpec(), param())
-            updateAAD(aad)
-            doFinal(bytesToDecrypt)
+        try {
+            crypt(Cipher.DECRYPT_MODE, bytesToDecrypt, aad)
+        } catch (e: GeneralSecurityException) {
+            throw IllegalArgumentException("AES-GCM authentication failed", e)
         }
 
-    companion object {
-        const val NAME = AES_GCM_NAME
+    public actual fun decryptOrNull(
+        bytesToDecrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray? = nullOnDecryptFailure { decrypt(bytesToDecrypt, aad) }
+
+    private companion object {
+        val EMPTY = ByteArray(0)
     }
 }

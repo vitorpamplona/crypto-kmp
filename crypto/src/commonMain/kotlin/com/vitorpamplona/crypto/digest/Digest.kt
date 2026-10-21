@@ -20,30 +20,38 @@
  */
 package com.vitorpamplona.crypto.digest
 
-/**
- * Message digest interface
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.Digest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
  */
-interface Digest {
+
+/**
+ * Message digest interface, implemented by [RIPEMD160Digest] and [KeccakDigest].
+ *
+ * Ported from Bouncy Castle's `Digest` (MIT).
+ */
+public interface Digest {
     /**
      * Return the algorithm name
      *
      * @return the algorithm name
      */
-    fun getAlgorithmName(): String
+    public fun getAlgorithmName(): String
 
     /**
      * Return the size, in bytes, of the digest produced by this message digest.
      *
      * @return the size, in bytes, of the digest produced by this message digest.
      */
-    fun getDigestSize(): Int
+    public fun getDigestSize(): Int
 
     /**
      * Update the message digest with a single byte.
      *
      * @param in the input byte to be entered.
      */
-    fun update(`in`: Byte)
+    public fun update(`in`: Byte)
 
     /**
      * Update the message digest with a block of bytes.
@@ -52,7 +60,7 @@ interface Digest {
      * @param inOff the offset into the byte array where the data starts.
      * @param len   the length of the data.
      */
-    fun update(
+    public fun update(
         `in`: ByteArray,
         inOff: Int,
         len: Int,
@@ -67,7 +75,7 @@ interface Digest {
      * @return something
      * @see .reset
      */
-    fun doFinal(
+    public fun doFinal(
         out: ByteArray,
         outOff: Int,
     ): Int
@@ -75,5 +83,5 @@ interface Digest {
     /**
      * Reset the digest back to it's initial state.
      */
-    fun reset()
+    public fun reset()
 }

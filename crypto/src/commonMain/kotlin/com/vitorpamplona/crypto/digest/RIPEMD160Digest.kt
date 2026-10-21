@@ -20,12 +20,20 @@
  */
 package com.vitorpamplona.crypto.digest
 
-/**
- * Implementation of RIPEMD
- *
- * @see [ripemd160](http://www.esat.kuleuven.ac.be/~bosselae/ripemd160.html)
+/*
+ * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.digests.RIPEMD160Digest):
+ * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
+ * released under the same MIT terms as the notice above.
  */
-class RIPEMD160Digest : GeneralDigest {
+
+/**
+ * Implementation of RIPEMD-160.
+ *
+ * Ported from Bouncy Castle's `RIPEMD160Digest` (MIT).
+ *
+ * @see [ripemd160](https://homes.esat.kuleuven.be/~bosselae/ripemd160.html)
+ */
+public class RIPEMD160Digest : GeneralDigest {
     private var h0 = 0
     private var h1 = 0
     private var h2 = 0
@@ -38,7 +46,7 @@ class RIPEMD160Digest : GeneralDigest {
     /**
      * Standard constructor
      */
-    constructor() {
+    public constructor() {
         reset()
     }
 
@@ -47,7 +55,7 @@ class RIPEMD160Digest : GeneralDigest {
      * message digest.
      * @param t RIPEMD160Digest
      */
-    constructor(t: RIPEMD160Digest) : super(t) {
+    public constructor(t: RIPEMD160Digest) : super(t) {
         copyIn(t)
     }
 
@@ -106,6 +114,8 @@ class RIPEMD160Digest : GeneralDigest {
         out: ByteArray,
         outOff: Int,
     ): Int {
+        // Checked before finish(), so a short buffer leaves the message in progress intact.
+        require(outOff >= 0 && DIGEST_LENGTH <= out.size - outOff) { "no room for a $DIGEST_LENGTH-byte digest" }
         finish()
 
         unpackWord(h0, out, outOff)
@@ -586,15 +596,7 @@ class RIPEMD160Digest : GeneralDigest {
         }
     }
 
-    override fun copy(): Memoable = RIPEMD160Digest(this)
-
-    override fun reset(other: Memoable) {
-        val d = other as RIPEMD160Digest
-
-        copyIn(d)
-    }
-
-    companion object {
+    private companion object {
         private const val DIGEST_LENGTH = 20
     }
 }

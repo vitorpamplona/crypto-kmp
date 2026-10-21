@@ -39,8 +39,15 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 - Code ported from elsewhere keeps its attribution (the AES and GHASH cores are BearSSL's, MIT).
 - JVM target is 17: Quartz targets 17, and a dependency can't need a newer JVM than its user.
 - Before pushing: `./gradlew spotlessApply`, then
-  `./gradlew :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:compileAppleMainKotlinMetadata`
+  `./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:compileAppleMainKotlinMetadata`
   (the pre-push hook runs these; `./gradlew installGitHook` installs it).
+- **Explicit API mode** is on: every public declaration says `public`, and `crypto/api/` records
+  the public ABI. A deliberate API change runs `./gradlew :crypto:updateKotlinAbi` and commits the
+  new dump; anything that should not be API is `internal`.
+- **Same behaviour on every platform** behind an `expect`: the same inputs accepted, the same
+  exceptions. Wrong sizes and failed authentication throw `IllegalArgumentException` (wrap JCA's
+  `GeneralSecurityException`), and `decryptOrNull` returns `null` for exactly the latter. Wipe
+  secret temporaries (`fill(0)`) once done with them.
 - Releases follow semantic versioning: a breaking change to the public API bumps the major
   version. Quartz and quic-kmp pin a version, so a breaking change needs matching changes there.
 - Commits: conventional commits (`feat:`, `fix:`, …). Never `--no-verify`.

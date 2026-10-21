@@ -22,9 +22,7 @@ package com.vitorpamplona.crypto.sha2
 
 /**
  * The SHA-256 block function (FIPS 180-4 §6.2), shared by the incremental [Sha256Digest]
- * and the proof-of-work miner's
- * [Sha256Midstate], which resumes from a
- * saved state.
+ * and [Sha256Midstate], which resumes from a saved state.
  */
 internal object Sha256Compression {
     const val BLOCK = 64

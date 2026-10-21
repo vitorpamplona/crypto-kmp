@@ -26,9 +26,16 @@ package com.vitorpamplona.crypto.aes
  * under the same MIT terms as the notice above.
  */
 
+/** Throws [IllegalArgumentException] unless [key] is an AES-128, AES-192 or AES-256 key. */
+internal fun requireAesKey(key: ByteArray) =
+    require(key.size == 16 || key.size == 24 || key.size == 32) {
+        "AES key must be 16, 24 or 32 bytes, was ${key.size}"
+    }
+
 /**
- * Constant-time AES (FIPS 197) for the targets without a platform AES this library calls
- * directly; JVM and Android use JCA instead.
+ * Constant-time AES (FIPS 197) where this library has no platform AES to call: GCM on
+ * every native target (CommonCrypto has no public GCM) and CBC on Linux. JVM and Android
+ * use JCA for both, and Apple uses CommonCrypto for CBC.
  *
  * The state is bitsliced: eight 64-bit words hold bit i of every byte of four blocks,
  * and SubBytes is the Boyar-Peralta boolean circuit, so no table is ever indexed by
@@ -42,20 +49,27 @@ package com.vitorpamplona.crypto.aes
 internal class AesBitsliced(
     key: ByteArray,
 ) {
-    private val rounds =
-        when (key.size) {
-            16 -> 10
-            24 -> 12
-            32 -> 14
-            else -> throw IllegalArgumentException("AES key must be 16, 24 or 32 bytes, was ${key.size}")
-        }
+    init {
+        requireAesKey(key)
+    }
+
+    // 10, 12 or 14.
+    private val rounds = key.size / 4 + 6
 
     private val roundKeys = expandKey(key, rounds)
 
-    /** Working state for one caller: reuse it across calls, never share it between threads. */
+    /**
+     * Working state for one caller: reuse it across calls, never share it between threads.
+     * It holds the last blocks processed, so [clear] it when done.
+     */
     class Scratch {
         internal val q = LongArray(8)
         internal val w = IntArray(16)
+
+        fun clear() {
+            q.fill(0)
+            w.fill(0)
+        }
     }
 
     /** Encrypts [count] (1 to 4) consecutive blocks of [src] into [dst]. They may overlap exactly. */
@@ -581,6 +595,7 @@ private fun expandKey(
         compressed[c + 1] = (q[4] and M1) or (q[5] and M2) or (q[6] and M4) or (q[7] and M8)
     }
     words.fill(0)
+    q.fill(0)
 
     val expanded = LongArray((rounds + 1) shl 3)
     for (u in compressed.indices) {

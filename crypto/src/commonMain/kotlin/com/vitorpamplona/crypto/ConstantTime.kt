@@ -33,7 +33,7 @@ package com.vitorpamplona.crypto
  *
  * The length check leaks only the (public, fixed) tag length, not its contents.
  */
-fun ByteArray.equalsConstantTime(other: ByteArray): Boolean {
+public fun ByteArray.equalsConstantTime(other: ByteArray): Boolean {
     if (this.size != other.size) return false
     var diff = 0
     for (i in indices) {

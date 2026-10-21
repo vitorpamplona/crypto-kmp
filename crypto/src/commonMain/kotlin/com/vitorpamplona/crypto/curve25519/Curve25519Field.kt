@@ -20,6 +20,16 @@
  */
 package com.vitorpamplona.crypto.curve25519
 
+/*
+ * The radix-2^25.5 representation, the multiply, square and carry chains and
+ * the addition chains for inversion and the (p-5)/8 power follow ref10, the
+ * Ed25519 reference code in SUPERCOP by Daniel J. Bernstein, Niels Duif, Tanja
+ * Lange, Peter Schwabe and Bo-Yin Yang (public domain). The conditional swap
+ * and the function names come from TweetNaCl by Daniel J. Bernstein, Bernard van
+ * Gastel, Wesley Janssen, Tanja Lange, Peter Schwabe and Sjaak Smetsers
+ * (public domain), which this file used to be a port of.
+ */
+
 /**
  * Field arithmetic over GF(2^255-19) for Curve25519 and Ed25519.
  *
@@ -50,9 +60,9 @@ package com.vitorpamplona.crypto.curve25519
  * Each `add`/`sub`/`mul`/`sqr` has an `*Into` twin that writes into a
  * caller-owned output, because the allocating forms turned a scalar
  * multiplication into about a megabyte of garbage. The hot paths (the X25519
- * ladder and Ed25519 point addition) use the in-place forms exclusively and
- * allocate nothing; the allocating forms remain for off-hot-path clarity and
- * as a differential-testing partner for the in-place ones.
+ * ladder and the Ed25519 group operations) use the in-place forms exclusively and
+ * allocate nothing; the allocating forms remain for off-hot-path clarity, in
+ * point encoding and decoding.
  *
  * Unlike the 16-limb version these need no scratch accumulator: [mulInto] and
  * [sqrInto] are straight-line over local Longs, so there is no array to pass
@@ -83,9 +93,6 @@ internal object Curve25519Field {
 
     val GF0 = LongArray(LIMBS)
     val GF1 = gf(1)
-
-    /** a24 = 121665, the Montgomery ladder constant. */
-    val A24 = gf(121665)
 
     /** d = -121665/121666, the Edwards curve constant. */
     val D = gf(56195235, 13857412, 51736253, 6949390, 114729, 24766616, 60832955, 30306712, 48412415, 21499315)
@@ -448,26 +455,6 @@ internal object Curve25519Field {
         o[9] = h9
     }
 
-    /**
-     * Carry and partially reduce a field element in place.
-     *
-     * Brings limbs back inside their nominal widths so a value that has been
-     * added or subtracted repeatedly is safe to feed to [mulInto] again. It
-     * does NOT produce a canonical representative — [pack25519] does that.
-     */
-    fun car25519(o: LongArray) {
-        var c: Long
-        for (i in 0 until LIMBS) {
-            val width = if (i and 1 == 0) 26 else 25
-            c = (o[i] + (1L shl (width - 1))) shr width
-            if (i == 9) o[0] += 19 * c else o[i + 1] += c
-            o[i] -= c shl width
-        }
-        c = (o[0] + (1L shl 25)) shr 26
-        o[1] += c
-        o[0] -= c shl 26
-    }
-
     /** Conditional swap: if b=1, swap p and q element-wise. */
     fun sel25519(
         p: LongArray,
@@ -492,6 +479,10 @@ internal object Curve25519Field {
      * as p itself — into the unique one below p. The second pass then carries
      * without wrapping, so the top carry falls off and the remaining limbs are
      * exactly the base-2^25.5 digits of the answer.
+     *
+     * The digits are then streamed into the output through a bit accumulator.
+     * How many bytes each limb completes depends only on the limb widths, never
+     * on the limb values, so the loop runs the same way for every input.
      */
     fun pack25519(n: LongArray): ByteArray {
         val h = n.copyOf()
@@ -508,18 +499,21 @@ internal object Curve25519Field {
             h[i] -= c shl width
         }
         val o = ByteArray(32)
+        var acc = 0L
+        var accBits = 0
+        var idx = 0
         for (i in 0 until LIMBS) {
-            var v = h[i]
-            var bit = OFFSET[i]
-            while (v != 0L) {
-                val idx = bit shr 3
-                val shift = bit and 7
-                val room = 8 - shift
-                o[idx] = (o[idx].toLong() or ((v and ((1L shl room) - 1)) shl shift)).toByte()
-                v = v ushr room
-                bit += room
+            acc = acc or (h[i] shl accBits)
+            accBits += if (i and 1 == 0) 26 else 25
+            while (accBits >= 8) {
+                o[idx++] = acc.toByte()
+                acc = acc ushr 8
+                accBits -= 8
             }
         }
+        // 255 bits: 31 whole bytes, and the top 7 bits left in the accumulator.
+        o[idx] = acc.toByte()
+        h.fill(0)
         return o
     }
 
@@ -550,28 +544,73 @@ internal object Curve25519Field {
     /** Field inversion: o = a^(-1) (mod p) using Fermat's little theorem. */
     fun inv25519(a: LongArray): LongArray {
         val o = LongArray(LIMBS)
-        inv25519Into(o, a, LongArray(LIMBS))
+        inv25519Into(o, a)
         return o
     }
 
     /**
-     * Field inversion into [o], allocation-free.
+     * Field inversion into [o]: a^(p-2), with ref10's addition chain.
      *
-     * a^(p-2) by square-and-multiply over the fixed exponent: 254 squarings
-     * and ~250 multiplications. [c] is a caller-owned scratch element; [o] may
-     * alias [a].
+     * 254 squarings and 11 multiplications, where plain square-and-multiply
+     * over the exponent spent about 250 multiplications on top of the same
+     * squarings. [o] may alias [a]. The temporaries are wiped, since [a] can
+     * be a secret (the ladder's Z).
      */
     fun inv25519Into(
         o: LongArray,
         a: LongArray,
-        c: LongArray,
     ) {
-        a.copyInto(c)
-        for (i in 253 downTo 0) {
-            sqrInto(c, c)
-            if (i != 2 && i != 4) mulInto(c, c, a)
-        }
-        c.copyInto(o)
+        val t0 = LongArray(LIMBS)
+        val t1 = LongArray(LIMBS)
+        val t2 = LongArray(LIMBS)
+        sqrInto(t0, a) // 2
+        sqrNInto(t1, t0, 2) // 8
+        mulInto(t1, a, t1) // 9
+        mulInto(t0, t0, t1) // 11
+        sqrInto(t2, t0) // 22
+        mulInto(t1, t1, t2) // 2^5 - 1
+        sqrNInto(t2, t1, 5)
+        mulInto(t1, t2, t1) // 2^10 - 1
+        sqrNInto(t2, t1, 10)
+        mulInto(t2, t2, t1) // 2^20 - 1
+        val t3 = LongArray(LIMBS)
+        sqrNInto(t3, t2, 20)
+        mulInto(t2, t3, t2) // 2^40 - 1
+        sqrNInto(t2, t2, 10)
+        mulInto(t1, t2, t1) // 2^50 - 1
+        sqrNInto(t2, t1, 50)
+        mulInto(t2, t2, t1) // 2^100 - 1
+        sqrNInto(t3, t2, 100)
+        mulInto(t2, t3, t2) // 2^200 - 1
+        sqrNInto(t2, t2, 50)
+        mulInto(t1, t2, t1) // 2^250 - 1
+        sqrNInto(t1, t1, 5) // 2^255 - 2^5
+        mulInto(o, t1, t0) // 2^255 - 21 = p - 2
+        t0.fill(0)
+        t1.fill(0)
+        t2.fill(0)
+        t3.fill(0)
+    }
+
+    /** o = a^(2^n): [n] >= 1 squarings in a row. [o] may alias [a]. */
+    private fun sqrNInto(
+        o: LongArray,
+        a: LongArray,
+        n: Int,
+    ) {
+        sqrInto(o, a)
+        for (i in 1 until n) sqrInto(o, o)
+    }
+
+    /**
+     * True when [a] is zero mod p. ORs every byte of the canonical encoding
+     * together rather than stopping at the first non-zero one.
+     */
+    fun isZero(a: LongArray): Boolean {
+        val bytes = pack25519(a)
+        var acc = 0
+        for (b in bytes) acc = acc or b.toInt()
+        return acc == 0
     }
 
     /** Parity of a field element (lowest bit after reduction). */
@@ -580,13 +619,37 @@ internal object Curve25519Field {
         return (d[0].toInt() and 1)
     }
 
-    /** Raise a field element to the power (2^252 - 3), used in sqrt. */
+    /**
+     * Raise a field element to the power (2^252 - 3) = (p - 5) / 8, used in
+     * the square root. ref10's addition chain: 250 squarings and 11
+     * multiplications. Only ever applied to public data (point decoding).
+     */
     fun pow2523(a: LongArray): LongArray {
-        val c = a.copyOf()
-        for (i in 250 downTo 0) {
-            sqrInto(c, c)
-            if (i != 1) mulInto(c, c, a)
-        }
-        return c
+        val t0 = LongArray(LIMBS)
+        val t1 = LongArray(LIMBS)
+        val t2 = LongArray(LIMBS)
+        sqrInto(t0, a) // 2
+        sqrNInto(t1, t0, 2) // 8
+        mulInto(t1, a, t1) // 9
+        mulInto(t0, t0, t1) // 11
+        sqrInto(t0, t0) // 22
+        mulInto(t0, t1, t0) // 2^5 - 1
+        sqrNInto(t1, t0, 5)
+        mulInto(t0, t1, t0) // 2^10 - 1
+        sqrNInto(t1, t0, 10)
+        mulInto(t1, t1, t0) // 2^20 - 1
+        sqrNInto(t2, t1, 20)
+        mulInto(t1, t2, t1) // 2^40 - 1
+        sqrNInto(t1, t1, 10)
+        mulInto(t0, t1, t0) // 2^50 - 1
+        sqrNInto(t1, t0, 50)
+        mulInto(t1, t1, t0) // 2^100 - 1
+        sqrNInto(t2, t1, 100)
+        mulInto(t1, t2, t1) // 2^200 - 1
+        sqrNInto(t1, t1, 50)
+        mulInto(t0, t1, t0) // 2^250 - 1
+        sqrNInto(t0, t0, 2) // 2^252 - 4
+        mulInto(t0, t0, a) // 2^252 - 3
+        return t0
     }
 }

@@ -1,0 +1,247 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, linuxX64, macosArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <crypto-kmp:crypto>
+abstract interface com.vitorpamplona.crypto.digest/Digest { // com.vitorpamplona.crypto.digest/Digest|null[0]
+    abstract fun doFinal(kotlin/ByteArray, kotlin/Int): kotlin/Int // com.vitorpamplona.crypto.digest/Digest.doFinal|doFinal(kotlin.ByteArray;kotlin.Int){}[0]
+    abstract fun getAlgorithmName(): kotlin/String // com.vitorpamplona.crypto.digest/Digest.getAlgorithmName|getAlgorithmName(){}[0]
+    abstract fun getDigestSize(): kotlin/Int // com.vitorpamplona.crypto.digest/Digest.getDigestSize|getDigestSize(){}[0]
+    abstract fun reset() // com.vitorpamplona.crypto.digest/Digest.reset|reset(){}[0]
+    abstract fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/Digest.update|update(kotlin.Byte){}[0]
+    abstract fun update(kotlin/ByteArray, kotlin/Int, kotlin/Int) // com.vitorpamplona.crypto.digest/Digest.update|update(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface com.vitorpamplona.crypto/SymmetricCipher { // com.vitorpamplona.crypto/SymmetricCipher|null[0]
+    abstract fun decrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto/SymmetricCipher.decrypt|decrypt(kotlin.ByteArray){}[0]
+    abstract fun decryptOrNull(kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto/SymmetricCipher.decryptOrNull|decryptOrNull(kotlin.ByteArray){}[0]
+    abstract fun encrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto/SymmetricCipher.encrypt|encrypt(kotlin.ByteArray){}[0]
+    abstract fun name(): kotlin/String // com.vitorpamplona.crypto/SymmetricCipher.name|name(){}[0]
+}
+
+abstract class com.vitorpamplona.crypto.digest/GeneralDigest : com.vitorpamplona.crypto.digest/Digest { // com.vitorpamplona.crypto.digest/GeneralDigest|null[0]
+    constructor <init>() // com.vitorpamplona.crypto.digest/GeneralDigest.<init>|<init>(){}[0]
+    constructor <init>(com.vitorpamplona.crypto.digest/GeneralDigest) // com.vitorpamplona.crypto.digest/GeneralDigest.<init>|<init>(com.vitorpamplona.crypto.digest.GeneralDigest){}[0]
+
+    abstract fun processBlock() // com.vitorpamplona.crypto.digest/GeneralDigest.processBlock|processBlock(){}[0]
+    abstract fun processLength(kotlin/Long) // com.vitorpamplona.crypto.digest/GeneralDigest.processLength|processLength(kotlin.Long){}[0]
+    abstract fun processWord(kotlin/ByteArray, kotlin/Int) // com.vitorpamplona.crypto.digest/GeneralDigest.processWord|processWord(kotlin.ByteArray;kotlin.Int){}[0]
+    final fun copyIn(com.vitorpamplona.crypto.digest/GeneralDigest) // com.vitorpamplona.crypto.digest/GeneralDigest.copyIn|copyIn(com.vitorpamplona.crypto.digest.GeneralDigest){}[0]
+    final fun finish() // com.vitorpamplona.crypto.digest/GeneralDigest.finish|finish(){}[0]
+    open fun reset() // com.vitorpamplona.crypto.digest/GeneralDigest.reset|reset(){}[0]
+    open fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/GeneralDigest.update|update(kotlin.Byte){}[0]
+    open fun update(kotlin/ByteArray, kotlin/Int, kotlin/Int) // com.vitorpamplona.crypto.digest/GeneralDigest.update|update(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+final class com.vitorpamplona.crypto.aes/AESCBC : com.vitorpamplona.crypto/SymmetricCipher { // com.vitorpamplona.crypto.aes/AESCBC|null[0]
+    constructor <init>(kotlin/ByteArray = ..., kotlin/ByteArray = ...) // com.vitorpamplona.crypto.aes/AESCBC.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val iv // com.vitorpamplona.crypto.aes/AESCBC.iv|{}iv[0]
+        final fun <get-iv>(): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESCBC.iv.<get-iv>|<get-iv>(){}[0]
+    final val keyBytes // com.vitorpamplona.crypto.aes/AESCBC.keyBytes|{}keyBytes[0]
+        final fun <get-keyBytes>(): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESCBC.keyBytes.<get-keyBytes>|<get-keyBytes>(){}[0]
+
+    final fun decrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESCBC.decrypt|decrypt(kotlin.ByteArray){}[0]
+    final fun decryptOrNull(kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto.aes/AESCBC.decryptOrNull|decryptOrNull(kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESCBC.encrypt|encrypt(kotlin.ByteArray){}[0]
+    final fun name(): kotlin/String // com.vitorpamplona.crypto.aes/AESCBC.name|name(){}[0]
+}
+
+final class com.vitorpamplona.crypto.aes/AESGCM : com.vitorpamplona.crypto/SymmetricCipher { // com.vitorpamplona.crypto.aes/AESGCM|null[0]
+    constructor <init>(kotlin/ByteArray = ..., kotlin/ByteArray = ...) // com.vitorpamplona.crypto.aes/AESGCM.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val keyBytes // com.vitorpamplona.crypto.aes/AESGCM.keyBytes|{}keyBytes[0]
+        final fun <get-keyBytes>(): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.keyBytes.<get-keyBytes>|<get-keyBytes>(){}[0]
+    final val nonce // com.vitorpamplona.crypto.aes/AESGCM.nonce|{}nonce[0]
+        final fun <get-nonce>(): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.nonce.<get-nonce>|<get-nonce>(){}[0]
+
+    final fun decrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.decrypt|decrypt(kotlin.ByteArray){}[0]
+    final fun decrypt(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.decrypt|decrypt(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun decryptOrNull(kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto.aes/AESGCM.decryptOrNull|decryptOrNull(kotlin.ByteArray){}[0]
+    final fun decryptOrNull(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto.aes/AESGCM.decryptOrNull|decryptOrNull(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.encrypt|encrypt(kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.aes/AESGCM.encrypt|encrypt(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun name(): kotlin/String // com.vitorpamplona.crypto.aes/AESGCM.name|name(){}[0]
+}
+
+final class com.vitorpamplona.crypto.curve25519/Ed25519KeyPair { // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val privateKey // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.privateKey|{}privateKey[0]
+        final fun <get-privateKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.privateKey.<get-privateKey>|<get-privateKey>(){}[0]
+    final val publicKey // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.publicKey|{}publicKey[0]
+        final fun <get-publicKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.publicKey.<get-publicKey>|<get-publicKey>(){}[0]
+
+    final fun component1(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.component1|component1(){}[0]
+    final fun component2(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.component2|component2(){}[0]
+    final fun copy(kotlin/ByteArray = ..., kotlin/ByteArray = ...): com.vitorpamplona.crypto.curve25519/Ed25519KeyPair // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.copy|copy(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.vitorpamplona.crypto.curve25519/Ed25519KeyPair.toString|toString(){}[0]
+}
+
+final class com.vitorpamplona.crypto.curve25519/X25519KeyPair { // com.vitorpamplona.crypto.curve25519/X25519KeyPair|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // com.vitorpamplona.crypto.curve25519/X25519KeyPair.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val privateKey // com.vitorpamplona.crypto.curve25519/X25519KeyPair.privateKey|{}privateKey[0]
+        final fun <get-privateKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519KeyPair.privateKey.<get-privateKey>|<get-privateKey>(){}[0]
+    final val publicKey // com.vitorpamplona.crypto.curve25519/X25519KeyPair.publicKey|{}publicKey[0]
+        final fun <get-publicKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519KeyPair.publicKey.<get-publicKey>|<get-publicKey>(){}[0]
+
+    final fun component1(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519KeyPair.component1|component1(){}[0]
+    final fun component2(): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519KeyPair.component2|component2(){}[0]
+    final fun copy(kotlin/ByteArray = ..., kotlin/ByteArray = ...): com.vitorpamplona.crypto.curve25519/X25519KeyPair // com.vitorpamplona.crypto.curve25519/X25519KeyPair.copy|copy(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.vitorpamplona.crypto.curve25519/X25519KeyPair.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.vitorpamplona.crypto.curve25519/X25519KeyPair.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.vitorpamplona.crypto.curve25519/X25519KeyPair.toString|toString(){}[0]
+}
+
+final class com.vitorpamplona.crypto.digest/DigestInstance { // com.vitorpamplona.crypto.digest/DigestInstance|null[0]
+    constructor <init>(kotlin/String) // com.vitorpamplona.crypto.digest/DigestInstance.<init>|<init>(kotlin.String){}[0]
+
+    final fun digest(): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(){}[0]
+    final fun digest(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(kotlin.ByteArray){}[0]
+    final fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/DigestInstance.update|update(kotlin.Byte){}[0]
+    final fun update(kotlin/ByteArray) // com.vitorpamplona.crypto.digest/DigestInstance.update|update(kotlin.ByteArray){}[0]
+}
+
+final class com.vitorpamplona.crypto.digest/KeccakDigest : com.vitorpamplona.crypto.digest/Digest { // com.vitorpamplona.crypto.digest/KeccakDigest|null[0]
+    constructor <init>(com.vitorpamplona.crypto.digest/KeccakDigest) // com.vitorpamplona.crypto.digest/KeccakDigest.<init>|<init>(com.vitorpamplona.crypto.digest.KeccakDigest){}[0]
+    constructor <init>(kotlin/Int = ...) // com.vitorpamplona.crypto.digest/KeccakDigest.<init>|<init>(kotlin.Int){}[0]
+
+    final fun doFinal(kotlin/ByteArray, kotlin/Int): kotlin/Int // com.vitorpamplona.crypto.digest/KeccakDigest.doFinal|doFinal(kotlin.ByteArray;kotlin.Int){}[0]
+    final fun getAlgorithmName(): kotlin/String // com.vitorpamplona.crypto.digest/KeccakDigest.getAlgorithmName|getAlgorithmName(){}[0]
+    final fun getDigestSize(): kotlin/Int // com.vitorpamplona.crypto.digest/KeccakDigest.getDigestSize|getDigestSize(){}[0]
+    final fun reset() // com.vitorpamplona.crypto.digest/KeccakDigest.reset|reset(){}[0]
+    final fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/KeccakDigest.update|update(kotlin.Byte){}[0]
+    final fun update(kotlin/ByteArray, kotlin/Int, kotlin/Int) // com.vitorpamplona.crypto.digest/KeccakDigest.update|update(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+final class com.vitorpamplona.crypto.digest/RIPEMD160Digest : com.vitorpamplona.crypto.digest/GeneralDigest { // com.vitorpamplona.crypto.digest/RIPEMD160Digest|null[0]
+    constructor <init>() // com.vitorpamplona.crypto.digest/RIPEMD160Digest.<init>|<init>(){}[0]
+    constructor <init>(com.vitorpamplona.crypto.digest/RIPEMD160Digest) // com.vitorpamplona.crypto.digest/RIPEMD160Digest.<init>|<init>(com.vitorpamplona.crypto.digest.RIPEMD160Digest){}[0]
+
+    final fun doFinal(kotlin/ByteArray, kotlin/Int): kotlin/Int // com.vitorpamplona.crypto.digest/RIPEMD160Digest.doFinal|doFinal(kotlin.ByteArray;kotlin.Int){}[0]
+    final fun getAlgorithmName(): kotlin/String // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getAlgorithmName|getAlgorithmName(){}[0]
+    final fun getDigestSize(): kotlin/Int // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getDigestSize|getDigestSize(){}[0]
+    final fun reset() // com.vitorpamplona.crypto.digest/RIPEMD160Digest.reset|reset(){}[0]
+}
+
+final class com.vitorpamplona.crypto.kdf/Hkdf { // com.vitorpamplona.crypto.kdf/Hkdf|null[0]
+    constructor <init>(kotlin/String = ...) // com.vitorpamplona.crypto.kdf/Hkdf.<init>|<init>(kotlin.String){}[0]
+
+    final val algorithm // com.vitorpamplona.crypto.kdf/Hkdf.algorithm|{}algorithm[0]
+        final fun <get-algorithm>(): kotlin/String // com.vitorpamplona.crypto.kdf/Hkdf.algorithm.<get-algorithm>|<get-algorithm>(){}[0]
+    final val hashLen // com.vitorpamplona.crypto.kdf/Hkdf.hashLen|{}hashLen[0]
+        final fun <get-hashLen>(): kotlin/Int // com.vitorpamplona.crypto.kdf/Hkdf.hashLen.<get-hashLen>|<get-hashLen>(){}[0]
+
+    final fun expand(kotlin/ByteArray, kotlin/ByteArray, kotlin/Int): kotlin/ByteArray // com.vitorpamplona.crypto.kdf/Hkdf.expand|expand(kotlin.ByteArray;kotlin.ByteArray;kotlin.Int){}[0]
+    final fun expandLabel(kotlin/ByteArray, kotlin/String, kotlin/ByteArray, kotlin/Int): kotlin/ByteArray // com.vitorpamplona.crypto.kdf/Hkdf.expandLabel|expandLabel(kotlin.ByteArray;kotlin.String;kotlin.ByteArray;kotlin.Int){}[0]
+    final fun extract(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.kdf/Hkdf.extract|extract(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun extract(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.kdf/Hkdf.extract|extract(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final class com.vitorpamplona.crypto.mac/MacInstance { // com.vitorpamplona.crypto.mac/MacInstance|null[0]
+    constructor <init>(kotlin/String, kotlin/ByteArray) // com.vitorpamplona.crypto.mac/MacInstance.<init>|<init>(kotlin.String;kotlin.ByteArray){}[0]
+
+    final fun doFinal(): kotlin/ByteArray // com.vitorpamplona.crypto.mac/MacInstance.doFinal|doFinal(){}[0]
+    final fun doFinal(kotlin/ByteArray, kotlin/Int = ...) // com.vitorpamplona.crypto.mac/MacInstance.doFinal|doFinal(kotlin.ByteArray;kotlin.Int){}[0]
+    final fun getMacLength(): kotlin/Int // com.vitorpamplona.crypto.mac/MacInstance.getMacLength|getMacLength(){}[0]
+    final fun init(kotlin/ByteArray, kotlin/String) // com.vitorpamplona.crypto.mac/MacInstance.init|init(kotlin.ByteArray;kotlin.String){}[0]
+    final fun update(kotlin/Byte) // com.vitorpamplona.crypto.mac/MacInstance.update|update(kotlin.Byte){}[0]
+    final fun update(kotlin/ByteArray) // com.vitorpamplona.crypto.mac/MacInstance.update|update(kotlin.ByteArray){}[0]
+}
+
+final class com.vitorpamplona.crypto.random/SecureRandom { // com.vitorpamplona.crypto.random/SecureRandom|null[0]
+    constructor <init>() // com.vitorpamplona.crypto.random/SecureRandom.<init>|<init>(){}[0]
+
+    final fun nextBytes(kotlin/ByteArray) // com.vitorpamplona.crypto.random/SecureRandom.nextBytes|nextBytes(kotlin.ByteArray){}[0]
+    final fun nextInt(): kotlin/Int // com.vitorpamplona.crypto.random/SecureRandom.nextInt|nextInt(){}[0]
+    final fun nextInt(kotlin/Int): kotlin/Int // com.vitorpamplona.crypto.random/SecureRandom.nextInt|nextInt(kotlin.Int){}[0]
+    final fun nextLong(): kotlin/Long // com.vitorpamplona.crypto.random/SecureRandom.nextLong|nextLong(){}[0]
+    final fun nextLong(kotlin/Long): kotlin/Long // com.vitorpamplona.crypto.random/SecureRandom.nextLong|nextLong(kotlin.Long){}[0]
+}
+
+final class com.vitorpamplona.crypto.sha2/Sha256Midstate { // com.vitorpamplona.crypto.sha2/Sha256Midstate|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/Int) // com.vitorpamplona.crypto.sha2/Sha256Midstate.<init>|<init>(kotlin.ByteArray;kotlin.Int){}[0]
+
+    final val prefixLength // com.vitorpamplona.crypto.sha2/Sha256Midstate.prefixLength|{}prefixLength[0]
+        final fun <get-prefixLength>(): kotlin/Int // com.vitorpamplona.crypto.sha2/Sha256Midstate.prefixLength.<get-prefixLength>|<get-prefixLength>(){}[0]
+    final val tail // com.vitorpamplona.crypto.sha2/Sha256Midstate.tail|{}tail[0]
+        final fun <get-tail>(): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/Sha256Midstate.tail.<get-tail>|<get-tail>(){}[0]
+
+    final fun digestInto(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/Sha256Midstate.digestInto|digestInto(kotlin.ByteArray){}[0]
+    final fun hasLeadingZeroBits(kotlin/Int): kotlin/Boolean // com.vitorpamplona.crypto.sha2/Sha256Midstate.hasLeadingZeroBits|hasLeadingZeroBits(kotlin.Int){}[0]
+
+    final object Companion { // com.vitorpamplona.crypto.sha2/Sha256Midstate.Companion|null[0]
+        final const val BLOCK // com.vitorpamplona.crypto.sha2/Sha256Midstate.Companion.BLOCK|{}BLOCK[0]
+            final fun <get-BLOCK>(): kotlin/Int // com.vitorpamplona.crypto.sha2/Sha256Midstate.Companion.BLOCK.<get-BLOCK>|<get-BLOCK>(){}[0]
+    }
+}
+
+final object com.vitorpamplona.crypto.chacha/ChaCha20 { // com.vitorpamplona.crypto.chacha/ChaCha20|null[0]
+    final fun decrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20.decrypt|decrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20.encrypt|encrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.chacha/ChaCha20Core { // com.vitorpamplona.crypto.chacha/ChaCha20Core|null[0]
+    final fun chaCha20Block(kotlin/ByteArray, kotlin/Int, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Core.chaCha20Block|chaCha20Block(kotlin.ByteArray;kotlin.Int;kotlin.ByteArray){}[0]
+    final fun chaCha20Xor(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/Int = ...): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Core.chaCha20Xor|chaCha20Xor(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.Int){}[0]
+    final fun hChaCha20(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Core.hChaCha20|hChaCha20(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun xChaCha20Xor(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Core.xChaCha20Xor|xChaCha20Xor(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.chacha/ChaCha20Poly1305 { // com.vitorpamplona.crypto.chacha/ChaCha20Poly1305|null[0]
+    final fun decrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Poly1305.decrypt|decrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun decryptOrNull(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto.chacha/ChaCha20Poly1305.decryptOrNull|decryptOrNull(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/ChaCha20Poly1305.encrypt|encrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.chacha/Poly1305 { // com.vitorpamplona.crypto.chacha/Poly1305|null[0]
+    final fun mac(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/Poly1305.mac|mac(kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.chacha/XChaCha20Poly1305 { // com.vitorpamplona.crypto.chacha/XChaCha20Poly1305|null[0]
+    final fun decrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/XChaCha20Poly1305.decrypt|decrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun decryptOrNull(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray? // com.vitorpamplona.crypto.chacha/XChaCha20Poly1305.decryptOrNull|decryptOrNull(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun encrypt(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.chacha/XChaCha20Poly1305.encrypt|encrypt(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.curve25519/Ed25519 { // com.vitorpamplona.crypto.curve25519/Ed25519|null[0]
+    final fun generateKeyPair(): com.vitorpamplona.crypto.curve25519/Ed25519KeyPair // com.vitorpamplona.crypto.curve25519/Ed25519.generateKeyPair|generateKeyPair(){}[0]
+    final fun keyPairFromSeed(kotlin/ByteArray): com.vitorpamplona.crypto.curve25519/Ed25519KeyPair // com.vitorpamplona.crypto.curve25519/Ed25519.keyPairFromSeed|keyPairFromSeed(kotlin.ByteArray){}[0]
+    final fun publicFromPrivate(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519.publicFromPrivate|publicFromPrivate(kotlin.ByteArray){}[0]
+    final fun sign(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/Ed25519.sign|sign(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun verify(kotlin/ByteArray, kotlin/ByteArray, kotlin/ByteArray): kotlin/Boolean // com.vitorpamplona.crypto.curve25519/Ed25519.verify|verify(kotlin.ByteArray;kotlin.ByteArray;kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.curve25519/X25519 { // com.vitorpamplona.crypto.curve25519/X25519|null[0]
+    final fun dh(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519.dh|dh(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun generateKeyPair(): com.vitorpamplona.crypto.curve25519/X25519KeyPair // com.vitorpamplona.crypto.curve25519/X25519.generateKeyPair|generateKeyPair(){}[0]
+    final fun publicFromPrivate(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519.publicFromPrivate|publicFromPrivate(kotlin.ByteArray){}[0]
+}
+
+final object com.vitorpamplona.crypto.random/RandomInstance { // com.vitorpamplona.crypto.random/RandomInstance|null[0]
+    final val charPool // com.vitorpamplona.crypto.random/RandomInstance.charPool|{}charPool[0]
+        final fun <get-charPool>(): kotlin.collections/List<kotlin/Char> // com.vitorpamplona.crypto.random/RandomInstance.charPool.<get-charPool>|<get-charPool>(){}[0]
+
+    final fun bytes(kotlin/Int): kotlin/ByteArray // com.vitorpamplona.crypto.random/RandomInstance.bytes|bytes(kotlin.Int){}[0]
+    final fun int(): kotlin/Int // com.vitorpamplona.crypto.random/RandomInstance.int|int(){}[0]
+    final fun int(kotlin/Int): kotlin/Int // com.vitorpamplona.crypto.random/RandomInstance.int|int(kotlin.Int){}[0]
+    final fun long(): kotlin/Long // com.vitorpamplona.crypto.random/RandomInstance.long|long(){}[0]
+    final fun long(kotlin/Long): kotlin/Long // com.vitorpamplona.crypto.random/RandomInstance.long|long(kotlin.Long){}[0]
+    final fun randomChar(): kotlin/Char // com.vitorpamplona.crypto.random/RandomInstance.randomChar|randomChar(){}[0]
+    final fun randomChars(kotlin/Int = ...): kotlin/String // com.vitorpamplona.crypto.random/RandomInstance.randomChars|randomChars(kotlin.Int){}[0]
+}
+
+final const val com.vitorpamplona.crypto.aes/AES_CBC_NAME // com.vitorpamplona.crypto.aes/AES_CBC_NAME|{}AES_CBC_NAME[0]
+    final fun <get-AES_CBC_NAME>(): kotlin/String // com.vitorpamplona.crypto.aes/AES_CBC_NAME.<get-AES_CBC_NAME>|<get-AES_CBC_NAME>(){}[0]
+final const val com.vitorpamplona.crypto.aes/AES_GCM_NAME // com.vitorpamplona.crypto.aes/AES_GCM_NAME|{}AES_GCM_NAME[0]
+    final fun <get-AES_GCM_NAME>(): kotlin/String // com.vitorpamplona.crypto.aes/AES_GCM_NAME.<get-AES_GCM_NAME>|<get-AES_GCM_NAME>(){}[0]
+
+final fun (kotlin/ByteArray).com.vitorpamplona.crypto/equalsConstantTime(kotlin/ByteArray): kotlin/Boolean // com.vitorpamplona.crypto/equalsConstantTime|equalsConstantTime@kotlin.ByteArray(kotlin.ByteArray){}[0]
+final fun com.vitorpamplona.crypto.sha2/sha256(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256|sha256(kotlin.ByteArray){}[0]
+final fun com.vitorpamplona.crypto.sha2/sha256Into(kotlin/ByteArray, kotlin/ByteArray, kotlin/Int = ...): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256Into|sha256Into(kotlin.ByteArray;kotlin.ByteArray;kotlin.Int){}[0]

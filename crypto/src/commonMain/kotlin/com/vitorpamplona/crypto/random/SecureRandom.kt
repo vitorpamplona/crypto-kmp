@@ -20,14 +20,65 @@
  */
 package com.vitorpamplona.crypto.random
 
-expect class SecureRandom() {
-    fun nextInt(bound: Int): Int
+/**
+ * The platform's cryptographically secure random generator: `java.security.SecureRandom`
+ * on JVM and Android, `SecRandomCopyBytes` on Apple, `getrandom(2)` on Linux.
+ *
+ * The bounded draws are computed here from the raw ones with [boundedNextInt] and
+ * [boundedNextLong], so every platform turns the same random bits into the same value.
+ */
+public expect class SecureRandom() {
+    /** A uniform [Int] in `0 until bound`. Throws [IllegalArgumentException] unless `bound > 0`. */
+    public fun nextInt(bound: Int): Int
 
-    fun nextLong(bound: Long): Long
+    /** A uniform [Long] in `0 until bound`. Throws [IllegalArgumentException] unless `bound > 0`. */
+    public fun nextLong(bound: Long): Long
 
-    fun nextInt(): Int
+    public fun nextInt(): Int
 
-    fun nextLong(): Long
+    public fun nextLong(): Long
 
-    fun nextBytes(output: ByteArray)
+    public fun nextBytes(output: ByteArray)
+}
+
+/**
+ * A uniform draw in `0 until bound` from [next], a source of uniform 32-bit values.
+ *
+ * The JDK's algorithm (`RandomSupport.boundedNextInt`): a power of two keeps the low bits;
+ * any other bound reduces a non-negative 31-bit draw and rejects the draws from the last,
+ * incomplete run of `bound` values, which would otherwise make the small results more likely.
+ */
+internal inline fun boundedNextInt(
+    bound: Int,
+    next: () -> Int,
+): Int {
+    require(bound > 0) { "bound must be positive, was $bound" }
+    val m = bound - 1
+    if ((bound and m) == 0) return next() and m
+    var u = next() ushr 1
+    var r = u % bound
+    // u - r is the start of u's run of bound values; the run is incomplete when it
+    // would end past Int.MAX_VALUE, which shows as an overflow to negative.
+    while (u - r + m < 0) {
+        u = next() ushr 1
+        r = u % bound
+    }
+    return r
+}
+
+/** [boundedNextInt] for [Long]s: the JDK's `RandomSupport.boundedNextLong`. */
+internal inline fun boundedNextLong(
+    bound: Long,
+    next: () -> Long,
+): Long {
+    require(bound > 0) { "bound must be positive, was $bound" }
+    val m = bound - 1
+    if ((bound and m) == 0L) return next() and m
+    var u = next() ushr 1
+    var r = u % bound
+    while (u - r + m < 0) {
+        u = next() ushr 1
+        r = u % bound
+    }
+    return r
 }

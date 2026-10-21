@@ -20,13 +20,20 @@
  */
 package com.vitorpamplona.crypto.kdf
 
+import com.vitorpamplona.crypto.mac.HmacAlgorithm
 import com.vitorpamplona.crypto.mac.MacInstance
 
-class Hkdf(
-    val algorithm: String = "HmacSHA256",
-    val hashLen: Int = 32,
+/**
+ * HKDF (RFC 5869) over the HMAC named by [algorithm]: HmacSHA1, HmacSHA256 or HmacSHA512.
+ * Any other name throws [IllegalArgumentException].
+ */
+public class Hkdf(
+    public val algorithm: String = "HmacSHA256",
 ) {
-    fun extract(
+    /** The HMAC's output size in bytes; [expand] produces at most `255 * hashLen` bytes. */
+    public val hashLen: Int = HmacAlgorithm.of(algorithm).macLength
+
+    public fun extract(
         key: ByteArray,
         salt: ByteArray,
     ): ByteArray {
@@ -35,7 +42,7 @@ class Hkdf(
         return mac.doFinal()
     }
 
-    fun extract(
+    public fun extract(
         key1: ByteArray,
         key2: ByteArray,
         salt: ByteArray,
@@ -55,7 +62,7 @@ class Hkdf(
      *
      * Output length is capped at `255 * hashLen` per RFC 5869.
      */
-    fun expand(
+    public fun expand(
         prk: ByteArray,
         info: ByteArray,
         length: Int,
@@ -66,20 +73,22 @@ class Hkdf(
 
         val mac = MacInstance(algorithm, prk)
         val out = ByteArray(length)
-        var prev = ByteArray(0)
+        // T(i): secret, reused across rounds and wiped at the end. doFinal leaves the MAC
+        // keyed with prk, ready for the next round.
+        val t = ByteArray(hashLen)
         var written = 0
         var counter = 1
         while (written < length) {
-            mac.update(prev)
+            if (counter > 1) mac.update(t)
             mac.update(info)
             mac.update(counter.toByte())
-            prev = mac.doFinal()
-            mac.init(prk, algorithm) // reset the MAC for the next round
-            val toCopy = minOf(prev.size, length - written)
-            prev.copyInto(out, written, 0, toCopy)
+            mac.doFinal(t, 0)
+            val toCopy = minOf(hashLen, length - written)
+            t.copyInto(out, written, 0, toCopy)
             written += toCopy
             counter++
         }
+        t.fill(0)
         return out
     }
 
@@ -92,7 +101,7 @@ class Hkdf(
      *   opaque context<0..255> = transcript hash bytes
      * and feeds it into [expand].
      */
-    fun expandLabel(
+    public fun expandLabel(
         prk: ByteArray,
         label: String,
         context: ByteArray,

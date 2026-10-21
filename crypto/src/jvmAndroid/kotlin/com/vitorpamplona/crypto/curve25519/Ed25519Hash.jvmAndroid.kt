@@ -18,14 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.crypto.digest
+package com.vitorpamplona.crypto.curve25519
 
-interface ExtendedDigest : Digest {
-    /**
-     * Return the size in bytes of the internal buffer the digest applies it's compression
-     * function to.
-     *
-     * @return byte length of the digests internal buffer.
-     */
-    fun getByteLength(): Int
+import java.security.MessageDigest
+
+// One digest per thread: MessageDigest.getInstance is a provider lookup, and sign and
+// verify hash two or three times each.
+private val sha512Digest: ThreadLocal<MessageDigest> = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-512") }
+
+internal actual fun ed25519Sha512(vararg parts: ByteArray): ByteArray {
+    val digest = sha512Digest.get()!!
+    // A previous call that threw half-way would have left its input behind.
+    digest.reset()
+    for (part in parts) digest.update(part)
+    return digest.digest()
 }

@@ -26,15 +26,27 @@ package com.vitorpamplona.crypto.sha2
  * Use [sha256Into] on hot paths to avoid allocating a new array per call, and
  * [Sha256Digest] (or `MessageDigest` on the JVM) to hash a stream.
  */
-expect fun sha256(data: ByteArray): ByteArray
+public expect fun sha256(data: ByteArray): ByteArray
 
 /**
  * Allocation-free SHA-256: hash `data[0..len)` and write the 32-byte digest into `out`.
  * Returns `out` for convenience. `out` must be at least 32 bytes.
  * `data` may be longer than `len` (only the first `len` bytes are hashed).
+ *
+ * @throws IllegalArgumentException if `out` is shorter than 32 bytes or `len` is outside `0..data.size`.
  */
-expect fun sha256Into(
+public expect fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int = data.size,
 ): ByteArray
+
+/** The argument checks every [sha256Into] actual runs first, so all platforms reject the same inputs. */
+internal fun checkSha256IntoArgs(
+    out: ByteArray,
+    data: ByteArray,
+    len: Int,
+) {
+    require(out.size >= 32) { "out must hold a 32-byte digest, was ${out.size} bytes" }
+    require(len in 0..data.size) { "len must be in 0..${data.size}, was $len" }
+}

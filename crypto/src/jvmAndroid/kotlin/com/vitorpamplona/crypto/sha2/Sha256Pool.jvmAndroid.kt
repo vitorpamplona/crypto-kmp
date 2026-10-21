@@ -21,12 +21,19 @@
 package com.vitorpamplona.crypto.sha2
 
 import java.io.InputStream
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.concurrent.ArrayBlockingQueue
 
-class Sha256Pool(
+/** A fixed set of [Sha256Hasher]s shared between threads. */
+public class Sha256Pool(
     size: Int,
 ) {
     private val pool = ArrayBlockingQueue<Sha256Hasher>(size)
+
+    // The hashers handed out and not yet released. Only one release of a hasher can take it
+    // out of here, so releasing twice cannot put it in the queue twice.
+    private val checkedOut = Collections.synchronizedSet(Collections.newSetFromMap(IdentityHashMap<Sha256Hasher, Boolean>()))
 
     init {
         repeat(size) {
@@ -35,14 +42,21 @@ class Sha256Pool(
     }
 
     /** Blocks until a digest is free. */
-    fun acquire(): Sha256Hasher = pool.take()
+    public fun acquire(): Sha256Hasher = pool.take().also { checkedOut.add(it) }
 
-    fun release(digest: Sha256Hasher) {
+    /**
+     * Resets [digest] and returns it to the pool. Never blocks. Releasing a hasher that
+     * is not checked out, because it was already released or came from somewhere else,
+     * does nothing.
+     */
+    public fun release(digest: Sha256Hasher) {
+        if (!checkedOut.remove(digest)) return
         digest.reset()
-        pool.put(digest)
+        // Always room: the queue holds every hasher this pool made except the checked-out ones.
+        pool.offer(digest)
     }
 
-    fun hash(byteArray: ByteArray): ByteArray {
+    public fun hash(byteArray: ByteArray): ByteArray {
         val hasher = acquire()
         try {
             return hasher.digest(byteArray)
@@ -51,7 +65,7 @@ class Sha256Pool(
         }
     }
 
-    inline fun hasher(action: (hasher: Sha256Hasher) -> ByteArray): ByteArray {
+    public inline fun hasher(action: (hasher: Sha256Hasher) -> ByteArray): ByteArray {
         val hasher = acquire()
         try {
             return action(hasher)
@@ -68,7 +82,7 @@ class Sha256Pool(
      * @param bufferSize Size of chunks to read (default 8KB)
      * @return SHA256 hash bytes
      */
-    fun hashStream(
+    public fun hashStream(
         inputStream: InputStream,
         bufferSize: Int = 8192,
     ): ByteArray {

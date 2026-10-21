@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.crypto.digest
 
-expect class DigestInstance(
+/**
+ * An incremental message digest. Supports exactly SHA-1, SHA-256, SHA-512 and RIPEMD-160,
+ * on every platform. Names match ignoring case, with or without the dash (`SHA-256`,
+ * `sha256`, `RIPEMD-160`, `ripemd160`); any other name throws [IllegalArgumentException].
+ *
+ * [digest] returns the hash and resets, ready for the next message.
+ */
+public expect class DigestInstance(
     algorithm: String,
 ) {
-    fun update(array: ByteArray)
+    public fun update(array: ByteArray)
 
-    fun update(byte: Byte)
+    public fun update(byte: Byte)
 
-    fun digest(): ByteArray
+    public fun digest(): ByteArray
 
-    fun digest(input: ByteArray): ByteArray
+    public fun digest(input: ByteArray): ByteArray
 }
