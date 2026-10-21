@@ -297,8 +297,4 @@ internal class Poly1305State(
 }
 
 /** Read 4 bytes as unsigned little-endian Long starting at [offset]. */
-private fun ByteArray.littleEndianToLong(offset: Int): Long =
-    (this[offset].toLong() and 0xFF) or
-        ((this[offset + 1].toLong() and 0xFF) shl 8) or
-        ((this[offset + 2].toLong() and 0xFF) shl 16) or
-        ((this[offset + 3].toLong() and 0xFF) shl 24)
+private fun ByteArray.littleEndianToLong(offset: Int): Long = littleEndianToInt(offset).toLong() and 0xFFFFFFFFL
