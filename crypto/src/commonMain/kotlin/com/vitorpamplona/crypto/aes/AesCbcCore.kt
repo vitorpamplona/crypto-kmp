@@ -75,21 +75,31 @@ internal class AesCbcKey(
         for (i in 16 until out.size) {
             out[i] = (out[i].toInt() xor ciphertext[i - 16].toInt()).toByte()
         }
-
-        // Check every byte of the last block, with no early exit.
-        val pad = out[out.size - 1].toInt() and 0xFF
-        var bad = ((pad - 1) ushr 31) or ((16 - pad) ushr 31)
-        for (i in 1..16) {
-            val inPad = (i - pad - 1) ushr 31
-            val differs = ((out[out.size - i].toInt() and 0xFF) xor pad).let { (it or -it) ushr 31 }
-            bad = bad or (inPad and differs)
-        }
-        if (bad != 0) {
-            out.fill(0)
-            throw IllegalArgumentException("AES-CBC padding is invalid")
-        }
-        return out.copyOf(out.size - pad)
+        return stripPkcs7(out)
     }
+}
+
+/**
+ * Removes the PKCS#7 padding from [padded], a whole number of decrypted 16-byte blocks, checking
+ * every byte of the last block with no early exit. On bad padding it zeroes [padded] and throws
+ * [IllegalArgumentException], so a caller never sees the unauthenticated plaintext.
+ */
+internal fun stripPkcs7(padded: ByteArray): ByteArray {
+    require(padded.isNotEmpty() && padded.size % 16 == 0) {
+        "AES-CBC plaintext must be a non-empty multiple of 16 bytes, was ${padded.size}"
+    }
+    val pad = padded[padded.size - 1].toInt() and 0xFF
+    var bad = ((pad - 1) ushr 31) or ((16 - pad) ushr 31)
+    for (i in 1..16) {
+        val inPad = (i - pad - 1) ushr 31
+        val differs = ((padded[padded.size - i].toInt() and 0xFF) xor pad).let { (it or -it) ushr 31 }
+        bad = bad or (inPad and differs)
+    }
+    if (bad != 0) {
+        padded.fill(0)
+        throw IllegalArgumentException("AES-CBC padding is invalid")
+    }
+    return padded.copyOf(padded.size - pad)
 }
 
 /** One-shot AES-CBC, for callers that use a key once. */

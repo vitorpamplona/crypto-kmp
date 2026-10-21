@@ -30,6 +30,7 @@ import kotlinx.cinterop.refTo
 import kotlinx.cinterop.value
 import platform.CoreCrypto.CCCrypt
 import platform.CoreCrypto.CCOperation
+import platform.CoreCrypto.CCOptions
 import platform.CoreCrypto.kCCAlgorithmAES
 import platform.CoreCrypto.kCCDecrypt
 import platform.CoreCrypto.kCCEncrypt
@@ -37,20 +38,25 @@ import platform.CoreCrypto.kCCOptionPKCS7Padding
 import platform.CoreCrypto.kCCSuccess
 import platform.posix.size_tVar
 
-/** AES-CBC with PKCS#7 padding on CommonCrypto's CCCrypt (hardware AES). */
+/**
+ * AES-CBC with PKCS#7 padding on CommonCrypto's CCCrypt (hardware AES). Decryption runs CCCrypt
+ * without padding and strips it with [stripPkcs7]: CCCrypt's own PKCS#7 check accepts some invalid
+ * padding (a last byte above 16, for one), and its timing is unspecified.
+ */
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : SymmetricCipher {
     actual override fun name(): String = "aes-cbc"
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = crypt(kCCEncrypt, bytesToEncrypt)
+    @OptIn(ExperimentalForeignApi::class)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = crypt(kCCEncrypt, kCCOptionPKCS7Padding.convert(), bytesToEncrypt)
 
     actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray {
         require(bytesToDecrypt.isNotEmpty() && bytesToDecrypt.size % 16 == 0) {
             "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${bytesToDecrypt.size}"
         }
-        return crypt(kCCDecrypt, bytesToDecrypt)
+        return stripPkcs7(crypt(kCCDecrypt, 0u, bytesToDecrypt))
     }
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
@@ -63,6 +69,7 @@ actual class AESCBC actual constructor(
     @OptIn(ExperimentalForeignApi::class)
     private fun crypt(
         operation: CCOperation,
+        options: CCOptions,
         input: ByteArray,
     ): ByteArray {
         require(keyBytes.size == 16 || keyBytes.size == 24 || keyBytes.size == 32) {
@@ -79,7 +86,7 @@ actual class AESCBC actual constructor(
                     CCCrypt(
                         operation,
                         kCCAlgorithmAES.convert(),
-                        kCCOptionPKCS7Padding.convert(),
+                        options,
                         keyBytes.refTo(0),
                         keyBytes.size.convert(),
                         iv.refTo(0),

@@ -234,6 +234,27 @@ class AesTest {
     }
 
     @Test
+    fun cbcAcceptsOnlyValidPaddingBytes() {
+        val key = pattern(32, 7, 1)
+        val iv = pattern(16, 11, 3)
+        val plaintext = pattern(20, 13, 5)
+        // 20 bytes pad with twelve 0x0c bytes. XOR-ing the second-to-last block's last byte with
+        // delta turns the final padding byte into 0x0c xor delta. Only 0x01 (delta 13) is still valid
+        // PKCS#7, since the bytes before it are 0x0c; every other value must be rejected.
+        val cipher = AESCBC(key, iv)
+        val sealed = cipher.encrypt(plaintext)
+        for (delta in 1..255) {
+            val tampered = sealed.copyOf().also { it[it.size - 17] = (it[it.size - 17].toInt() xor delta).toByte() }
+            val opened = cipher.decryptOrNull(tampered)
+            if (delta == 13) {
+                assertEquals(31, opened?.size, "delta $delta")
+            } else {
+                assertNull(opened, "delta $delta")
+            }
+        }
+    }
+
+    @Test
     fun rejectsBadKeySizes() {
         assertFailsWith<IllegalArgumentException> { AesBitsliced(ByteArray(15)) }
         assertFailsWith<IllegalArgumentException> { AesBitsliced(ByteArray(33)) }
