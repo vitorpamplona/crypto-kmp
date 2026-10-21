@@ -26,38 +26,46 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+/**
+ * AES-CBC on JCA's "AES/CBC/NoPadding", with the PKCS#7 padding added and checked by the common
+ * [cbcEncrypt] and [cbcDecrypt], so padding errors and lengths behave as on every other platform.
+ */
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : SymmetricCipher {
-    private fun newCipher() = Cipher.getInstance("AES/CBC/PKCS5Padding")
+    init {
+        requireAesKey(keyBytes)
+        requireCbcIv(iv)
+    }
 
-    private fun keySpec() = SecretKeySpec(keyBytes, "AES")
+    // Both copy their arrays, so later changes to keyBytes or iv don't reach this instance.
+    private val keySpec = SecretKeySpec(keyBytes, "AES")
+    private val param = IvParameterSpec(iv)
 
-    private fun param() = IvParameterSpec(iv)
-
-    actual override fun name() = NAME
-
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(newCipher()) {
-            init(Cipher.ENCRYPT_MODE, keySpec(), param())
-            doFinal(bytesToEncrypt)
+    private fun crypt(
+        mode: Int,
+        blocks: ByteArray,
+    ): ByteArray =
+        try {
+            with(Cipher.getInstance("AES/CBC/NoPadding")) {
+                init(mode, keySpec, param)
+                doFinal(blocks)
+            }
+        } catch (e: GeneralSecurityException) {
+            throw IllegalArgumentException("AES-CBC failed", e)
         }
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(newCipher()) {
-            init(Cipher.DECRYPT_MODE, keySpec(), param())
-            doFinal(bytesToDecrypt)
-        }
+    actual override fun name() = AES_CBC_NAME
+
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = cbcEncrypt(bytesToEncrypt) { crypt(Cipher.ENCRYPT_MODE, it) }
+
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = cbcDecrypt(bytesToDecrypt) { crypt(Cipher.DECRYPT_MODE, it) }
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
             decrypt(bytesToDecrypt)
-        } catch (_: GeneralSecurityException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
-
-    companion object {
-        const val NAME = "aes-cbc"
-    }
 }

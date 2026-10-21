@@ -30,34 +30,36 @@ import kotlinx.cinterop.refTo
 import kotlinx.cinterop.value
 import platform.CoreCrypto.CCCrypt
 import platform.CoreCrypto.CCOperation
-import platform.CoreCrypto.CCOptions
 import platform.CoreCrypto.kCCAlgorithmAES
 import platform.CoreCrypto.kCCDecrypt
 import platform.CoreCrypto.kCCEncrypt
-import platform.CoreCrypto.kCCOptionPKCS7Padding
 import platform.CoreCrypto.kCCSuccess
 import platform.posix.size_tVar
 
 /**
- * AES-CBC with PKCS#7 padding on CommonCrypto's CCCrypt (hardware AES). Decryption runs CCCrypt
- * without padding and strips it with [stripPkcs7]: CCCrypt's own PKCS#7 check accepts some invalid
- * padding (a last byte above 16, for one), and its timing is unspecified.
+ * AES-CBC on CommonCrypto's CCCrypt (hardware AES) without padding, with the PKCS#7 padding
+ * added and checked by the common [cbcEncrypt] and [cbcDecrypt]: CCCrypt's own PKCS#7 check
+ * accepts some invalid padding (a last byte above 16, for one), and its timing is unspecified.
  */
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : SymmetricCipher {
-    actual override fun name(): String = "aes-cbc"
-
-    @OptIn(ExperimentalForeignApi::class)
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = crypt(kCCEncrypt, kCCOptionPKCS7Padding.convert(), bytesToEncrypt)
-
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray {
-        require(bytesToDecrypt.isNotEmpty() && bytesToDecrypt.size % 16 == 0) {
-            "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${bytesToDecrypt.size}"
-        }
-        return stripPkcs7(crypt(kCCDecrypt, 0u, bytesToDecrypt))
+    init {
+        requireAesKey(keyBytes)
+        requireCbcIv(iv)
     }
+
+    // CCCrypt takes the raw key on every call: copies, so later changes to keyBytes or iv
+    // don't reach this instance.
+    private val key = keyBytes.copyOf()
+    private val fixedIv = iv.copyOf()
+
+    actual override fun name(): String = AES_CBC_NAME
+
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = cbcEncrypt(bytesToEncrypt) { crypt(kCCEncrypt, it) }
+
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = cbcDecrypt(bytesToDecrypt) { crypt(kCCDecrypt, it) }
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
@@ -66,19 +68,13 @@ actual class AESCBC actual constructor(
             null
         }
 
+    /** CBC without padding over [blocks], a non-empty whole number of 16-byte blocks. */
     @OptIn(ExperimentalForeignApi::class)
     private fun crypt(
         operation: CCOperation,
-        options: CCOptions,
-        input: ByteArray,
+        blocks: ByteArray,
     ): ByteArray {
-        require(keyBytes.size == 16 || keyBytes.size == 24 || keyBytes.size == 32) {
-            "AES key must be 16, 24 or 32 bytes, was ${keyBytes.size}"
-        }
-        // CCCrypt reads 16 IV bytes whatever the array holds.
-        require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
-        // Padding adds at most one block.
-        val out = ByteArray(input.size + 16)
+        val out = ByteArray(blocks.size)
         val written =
             memScoped {
                 val moved = alloc<size_tVar>()
@@ -86,12 +82,12 @@ actual class AESCBC actual constructor(
                     CCCrypt(
                         operation,
                         kCCAlgorithmAES.convert(),
-                        options,
-                        keyBytes.refTo(0),
-                        keyBytes.size.convert(),
-                        iv.refTo(0),
-                        if (input.isEmpty()) null else input.refTo(0),
-                        input.size.convert(),
+                        0u,
+                        key.refTo(0),
+                        key.size.convert(),
+                        fixedIv.refTo(0),
+                        blocks.refTo(0),
+                        blocks.size.convert(),
                         out.refTo(0),
                         out.size.convert(),
                         moved.ptr,
@@ -99,6 +95,7 @@ actual class AESCBC actual constructor(
                 require(status == kCCSuccess) { "AES-CBC failed: CCCrypt status $status" }
                 moved.value.toInt()
             }
-        return out.copyOf(written)
+        check(written == out.size) { "AES-CBC: CCCrypt wrote $written of ${out.size} bytes" }
+        return out
     }
 }
