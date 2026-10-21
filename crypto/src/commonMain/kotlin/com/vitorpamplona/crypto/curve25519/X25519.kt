@@ -22,18 +22,23 @@ package com.vitorpamplona.crypto.curve25519
 
 import com.vitorpamplona.crypto.random.RandomInstance
 
+/*
+ * The Montgomery ladder follows TweetNaCl's crypto_scalarmult by Daniel J.
+ * Bernstein, Bernard van Gastel, Wesley Janssen, Tanja Lange, Peter Schwabe and
+ * Sjaak Smetsers (public domain), over the ref10-style field in
+ * [Curve25519Field].
+ */
+
 /**
- * X25519 Diffie-Hellman key exchange for MLS DHKEM (RFC 9180).
+ * X25519 Diffie-Hellman key exchange (RFC 7748).
  *
- * Used in TreeKEM for path secret encryption via HPKE.
- *
- * Every platform runs the same pure-Kotlin Montgomery-ladder implementation
- * over [Curve25519Field] (a TweetNaCl port) — it intentionally does NOT delegate to a platform provider such as
+ * Every platform runs the same pure-Kotlin Montgomery ladder, with TweetNaCl's
+ * structure over [Curve25519Field]'s ref10-style radix-2^25.5 field. It
+ * intentionally does NOT delegate to a platform provider such as
  * `java.security` XDH, because Android's KeyStore/JCA integration for raw X25519
  * keys is unreliable across API levels. `dh()` rejects an all-zero shared secret
- * per RFC 7748 §6.1; note the ladder relies on branch-uniform (mask-based)
- * selection but, being pure Kotlin on the JVM/ART, carries no hardware
- * constant-time guarantee.
+ * per RFC 7748 §6.1. The ladder relies on branch-free, mask-based selection
+ * but, being pure Kotlin, carries no hardware constant-time guarantee.
  */
 object X25519 {
     private const val KEY_LENGTH = 32

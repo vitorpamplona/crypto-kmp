@@ -20,6 +20,16 @@
  */
 package com.vitorpamplona.crypto.curve25519
 
+/*
+ * The radix-2^25.5 representation and the multiply, square and carry chains
+ * follow ref10, the Ed25519 reference code in SUPERCOP by Daniel J. Bernstein,
+ * Niels Duif, Tanja Lange, Peter Schwabe and Bo-Yin Yang (public domain). The
+ * conditional swap, the inversion and (p-5)/8 exponentiation chains and the
+ * function names come from TweetNaCl by Daniel J. Bernstein, Bernard van
+ * Gastel, Wesley Janssen, Tanja Lange, Peter Schwabe and Sjaak Smetsers
+ * (public domain), which this file used to be a port of.
+ */
+
 /**
  * Field arithmetic over GF(2^255-19) for Curve25519 and Ed25519.
  *
@@ -51,8 +61,8 @@ package com.vitorpamplona.crypto.curve25519
  * caller-owned output, because the allocating forms turned a scalar
  * multiplication into about a megabyte of garbage. The hot paths (the X25519
  * ladder and Ed25519 point addition) use the in-place forms exclusively and
- * allocate nothing; the allocating forms remain for off-hot-path clarity and
- * as a differential-testing partner for the in-place ones.
+ * allocate nothing; the allocating forms remain for off-hot-path clarity, in
+ * point encoding and decoding.
  *
  * Unlike the 16-limb version these need no scratch accumulator: [mulInto] and
  * [sqrInto] are straight-line over local Longs, so there is no array to pass
@@ -83,9 +93,6 @@ internal object Curve25519Field {
 
     val GF0 = LongArray(LIMBS)
     val GF1 = gf(1)
-
-    /** a24 = 121665, the Montgomery ladder constant. */
-    val A24 = gf(121665)
 
     /** d = -121665/121666, the Edwards curve constant. */
     val D = gf(56195235, 13857412, 51736253, 6949390, 114729, 24766616, 60832955, 30306712, 48412415, 21499315)
@@ -446,26 +453,6 @@ internal object Curve25519Field {
         o[7] = h7
         o[8] = h8
         o[9] = h9
-    }
-
-    /**
-     * Carry and partially reduce a field element in place.
-     *
-     * Brings limbs back inside their nominal widths so a value that has been
-     * added or subtracted repeatedly is safe to feed to [mulInto] again. It
-     * does NOT produce a canonical representative — [pack25519] does that.
-     */
-    fun car25519(o: LongArray) {
-        var c: Long
-        for (i in 0 until LIMBS) {
-            val width = if (i and 1 == 0) 26 else 25
-            c = (o[i] + (1L shl (width - 1))) shr width
-            if (i == 9) o[0] += 19 * c else o[i + 1] += c
-            o[i] -= c shl width
-        }
-        c = (o[0] + (1L shl 25)) shr 26
-        o[1] += c
-        o[0] -= c shl 26
     }
 
     /** Conditional swap: if b=1, swap p and q element-wise. */
