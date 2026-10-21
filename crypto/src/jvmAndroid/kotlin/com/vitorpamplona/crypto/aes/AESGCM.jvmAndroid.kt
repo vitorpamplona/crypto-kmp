@@ -26,9 +26,9 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-actual class AESGCM actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val nonce: ByteArray,
+public actual class AESGCM actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val nonce: ByteArray,
 ) : SymmetricCipher {
     init {
         requireAesKey(keyBytes)
@@ -52,7 +52,7 @@ actual class AESGCM actual constructor(
             doFinal(input)
         }
 
-    actual override fun name() = AES_GCM_NAME
+    actual override fun name(): String = AES_GCM_NAME
 
     actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = encrypt(bytesToEncrypt, EMPTY)
 
@@ -60,7 +60,7 @@ actual class AESGCM actual constructor(
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = decryptOrNull(bytesToDecrypt, EMPTY)
 
-    actual fun encrypt(
+    public actual fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray {
@@ -68,7 +68,7 @@ actual class AESGCM actual constructor(
         return crypt(Cipher.ENCRYPT_MODE, bytesToEncrypt, aad)
     }
 
-    actual fun decrypt(
+    public actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray =
@@ -78,7 +78,7 @@ actual class AESGCM actual constructor(
             throw IllegalArgumentException("AES-GCM authentication failed", e)
         }
 
-    actual fun decryptOrNull(
+    public actual fun decryptOrNull(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray? =

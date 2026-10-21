@@ -27,18 +27,18 @@ package com.vitorpamplona.crypto.random
  * The bounded draws are computed here from the raw ones with [boundedNextInt] and
  * [boundedNextLong], so every platform turns the same random bits into the same value.
  */
-expect class SecureRandom() {
+public expect class SecureRandom() {
     /** A uniform [Int] in `0 until bound`. Throws [IllegalArgumentException] unless `bound > 0`. */
-    fun nextInt(bound: Int): Int
+    public fun nextInt(bound: Int): Int
 
     /** A uniform [Long] in `0 until bound`. Throws [IllegalArgumentException] unless `bound > 0`. */
-    fun nextLong(bound: Long): Long
+    public fun nextLong(bound: Long): Long
 
-    fun nextInt(): Int
+    public fun nextInt(): Int
 
-    fun nextLong(): Long
+    public fun nextLong(): Long
 
-    fun nextBytes(output: ByteArray)
+    public fun nextBytes(output: ByteArray)
 }
 
 /**

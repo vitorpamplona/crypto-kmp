@@ -20,18 +20,18 @@
  */
 package com.vitorpamplona.crypto.digest
 
-actual class DigestInstance actual constructor(
+public actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
     private val digest = kotlinStreamingDigest(DigestAlgorithm.of(algorithm))
 
-    actual fun update(array: ByteArray) = digest.update(array)
+    public actual fun update(array: ByteArray): Unit = digest.update(array)
 
-    actual fun update(byte: Byte) = digest.update(byte)
+    public actual fun update(byte: Byte): Unit = digest.update(byte)
 
-    actual fun digest(): ByteArray = digest.digest()
+    public actual fun digest(): ByteArray = digest.digest()
 
-    actual fun digest(input: ByteArray): ByteArray {
+    public actual fun digest(input: ByteArray): ByteArray {
         digest.update(input)
         return digest.digest()
     }

@@ -28,16 +28,16 @@ package com.vitorpamplona.crypto.chacha
  * Note the argument order, (message, nonce, key), differs from [ChaCha20Core.chaCha20Xor]'s.
  * A wrong key or nonce size throws [IllegalArgumentException], so the two swapped fail.
  */
-object ChaCha20 {
-    fun encrypt(
+public object ChaCha20 {
+    public fun encrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
+    ): ByteArray = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 
-    fun decrypt(
+    public fun decrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
+    ): ByteArray = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 }

@@ -30,9 +30,9 @@ import javax.crypto.spec.SecretKeySpec
  * AES-CBC on JCA's "AES/CBC/NoPadding", with the PKCS#7 padding added and checked by the common
  * [cbcEncrypt] and [cbcDecrypt], so padding errors and lengths behave as on every other platform.
  */
-actual class AESCBC actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val iv: ByteArray,
+public actual class AESCBC actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val iv: ByteArray,
 ) : SymmetricCipher {
     init {
         requireAesKey(keyBytes)
@@ -56,7 +56,7 @@ actual class AESCBC actual constructor(
             throw IllegalArgumentException("AES-CBC failed", e)
         }
 
-    actual override fun name() = AES_CBC_NAME
+    actual override fun name(): String = AES_CBC_NAME
 
     actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = cbcEncrypt(bytesToEncrypt) { crypt(Cipher.ENCRYPT_MODE, it) }
 

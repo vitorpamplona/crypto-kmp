@@ -23,22 +23,22 @@ package com.vitorpamplona.crypto.sha2
 import java.io.InputStream
 import java.security.MessageDigest
 
-class Sha256Hasher {
-    val digest = MessageDigest.getInstance("SHA-256")
+public class Sha256Hasher {
+    private val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
 
-    fun hash(byteArray: ByteArray) = digest.digest(byteArray).also { digest.reset() }
+    public fun hash(byteArray: ByteArray): ByteArray = digest.digest(byteArray).also { digest.reset() }
 
-    fun update(
+    public fun update(
         input: ByteArray,
         offset: Int,
         length: Int,
-    ) = digest.update(input, offset, length)
+    ): Unit = digest.update(input, offset, length)
 
-    fun digest(byteArray: ByteArray) = digest.digest(byteArray)
+    public fun digest(byteArray: ByteArray): ByteArray = digest.digest(byteArray)
 
-    fun digest() = digest.digest()
+    public fun digest(): ByteArray = digest.digest()
 
-    fun reset() = digest.reset()
+    public fun reset(): Unit = digest.reset()
 
     /**
      * Calculate SHA256 hash by streaming the input in chunks.
@@ -48,7 +48,7 @@ class Sha256Hasher {
      * @param bufferSize Size of chunks to read (default 8KB)
      * @return SHA256 hash bytes
      */
-    fun hashStream(
+    public fun hashStream(
         inputStream: InputStream,
         bufferSize: Int = 8192,
     ): ByteArray {

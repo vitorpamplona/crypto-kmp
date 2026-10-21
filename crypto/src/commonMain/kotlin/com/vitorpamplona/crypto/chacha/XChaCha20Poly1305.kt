@@ -32,7 +32,7 @@ package com.vitorpamplona.crypto.chacha
  *
  * Sizes and failures are handled as in [ChaCha20Poly1305], with a 24-byte nonce.
  */
-object XChaCha20Poly1305 {
+public object XChaCha20Poly1305 {
     /**
      * AEAD encrypt.
      *
@@ -42,7 +42,7 @@ object XChaCha20Poly1305 {
      * @param key 32-byte key
      * @return ciphertext || 16-byte tag
      */
-    fun encrypt(
+    public fun encrypt(
         plaintext: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,
@@ -66,7 +66,7 @@ object XChaCha20Poly1305 {
      * @return plaintext
      * @throws IllegalArgumentException if the input is shorter than the tag or the tag does not verify
      */
-    fun decrypt(
+    public fun decrypt(
         ciphertextWithTag: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,
@@ -84,7 +84,7 @@ object XChaCha20Poly1305 {
      * [decrypt], but returns null when the input is shorter than the tag or the tag does not
      * verify. A wrong key or nonce size still throws.
      */
-    fun decryptOrNull(
+    public fun decryptOrNull(
         ciphertextWithTag: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,

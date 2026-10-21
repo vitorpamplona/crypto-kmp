@@ -22,9 +22,9 @@ package com.vitorpamplona.crypto.sha2
 
 // Straight on the block function: sha256 is on hot paths, and a digest object would cost
 // allocations and a reset nobody needs.
-actual fun sha256(data: ByteArray): ByteArray = ByteArray(32).also { Sha256Compression.hash(data, 0, data.size, it) }
+public actual fun sha256(data: ByteArray): ByteArray = ByteArray(32).also { Sha256Compression.hash(data, 0, data.size, it) }
 
-actual fun sha256Into(
+public actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,

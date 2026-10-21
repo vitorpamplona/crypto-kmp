@@ -37,15 +37,15 @@ package com.vitorpamplona.crypto.sha2
  * Pure Kotlin on purpose: MessageDigest has no API to resume from a saved state
  * (cloning one allocates per candidate).
  */
-class Sha256Midstate(
+public class Sha256Midstate(
     message: ByteArray,
     changesFrom: Int,
 ) {
     /** Bytes of the message folded into [midstate]: whole blocks before [changesFrom]. */
-    val prefixLength = (changesFrom / BLOCK) * BLOCK
+    public val prefixLength: Int = (changesFrom / BLOCK) * BLOCK
 
     /** The message from [prefixLength] to its end, plus the SHA-256 padding. */
-    val tail: ByteArray
+    public val tail: ByteArray
 
     private val midstate = IntArray(8).also { Sha256Compression.initState(it) }
     private val state = IntArray(8)
@@ -89,7 +89,7 @@ class Sha256Midstate(
      * big-endian order, so no 32-byte digest is ever materialized. A 256-bit digest
      * never has more than 256 leading zeros, so anything above 256 is false.
      */
-    fun hasLeadingZeroBits(minBits: Int): Boolean {
+    public fun hasLeadingZeroBits(minBits: Int): Boolean {
         require(minBits >= 0) { "minBits must not be negative, was $minBits" }
         if (minBits > 256) return false
         hashTail()
@@ -107,7 +107,7 @@ class Sha256Midstate(
     }
 
     /** Writes the 32-byte digest of the current [tail] into [out]. */
-    fun digestInto(out: ByteArray): ByteArray {
+    public fun digestInto(out: ByteArray): ByteArray {
         require(out.size >= 32) { "out must hold a 32-byte digest, was ${out.size} bytes" }
         hashTail()
         for (i in 0 until 8) {
@@ -120,7 +120,7 @@ class Sha256Midstate(
         return out
     }
 
-    companion object {
-        const val BLOCK = Sha256Compression.BLOCK
+    public companion object {
+        public const val BLOCK: Int = Sha256Compression.BLOCK
     }
 }

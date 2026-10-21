@@ -24,7 +24,7 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.random.RandomInstance
 
 /** The name AES-GCM ciphers report from [SymmetricCipher.name]. */
-const val AES_GCM_NAME = "aes-gcm"
+public const val AES_GCM_NAME: String = "aes-gcm"
 
 /**
  * AES-GCM (NIST SP 800-38D) with a 128-bit tag, under one key and one nonce. The output of
@@ -50,12 +50,12 @@ const val AES_GCM_NAME = "aes-gcm"
  * [decrypt] throws [IllegalArgumentException] when the input is shorter than the tag or the tag
  * does not verify, on every platform; [decryptOrNull] returns null in exactly those cases.
  */
-expect class AESGCM(
+public expect class AESGCM(
     keyBytes: ByteArray = RandomInstance.bytes(32),
     nonce: ByteArray = RandomInstance.bytes(16),
 ) : SymmetricCipher {
-    val keyBytes: ByteArray
-    val nonce: ByteArray
+    public val keyBytes: ByteArray
+    public val nonce: ByteArray
 
     override fun name(): String
 
@@ -70,19 +70,19 @@ expect class AESGCM(
      * AES-GCM encrypt with Additional Authenticated Data (AAD). Throws [IllegalStateException]
      * if this instance has already encrypted.
      */
-    fun encrypt(
+    public fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray
 
     /** AES-GCM decrypt with Additional Authenticated Data (AAD). */
-    fun decrypt(
+    public fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray
 
     /** [decrypt] with AAD, returning null in exactly the cases where it would throw. */
-    fun decryptOrNull(
+    public fun decryptOrNull(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray?

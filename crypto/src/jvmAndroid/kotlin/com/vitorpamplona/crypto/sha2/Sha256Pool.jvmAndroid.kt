@@ -26,7 +26,7 @@ import java.util.IdentityHashMap
 import java.util.concurrent.ArrayBlockingQueue
 
 /** A fixed set of [Sha256Hasher]s shared between threads. */
-class Sha256Pool(
+public class Sha256Pool(
     size: Int,
 ) {
     private val pool = ArrayBlockingQueue<Sha256Hasher>(size)
@@ -42,21 +42,21 @@ class Sha256Pool(
     }
 
     /** Blocks until a digest is free. */
-    fun acquire(): Sha256Hasher = pool.take().also { checkedOut.add(it) }
+    public fun acquire(): Sha256Hasher = pool.take().also { checkedOut.add(it) }
 
     /**
      * Resets [digest] and returns it to the pool. Never blocks. Releasing a hasher that
      * is not checked out, because it was already released or came from somewhere else,
      * does nothing.
      */
-    fun release(digest: Sha256Hasher) {
+    public fun release(digest: Sha256Hasher) {
         if (!checkedOut.remove(digest)) return
         digest.reset()
         // Always room: the queue holds every hasher this pool made except the checked-out ones.
         pool.offer(digest)
     }
 
-    fun hash(byteArray: ByteArray): ByteArray {
+    public fun hash(byteArray: ByteArray): ByteArray {
         val hasher = acquire()
         try {
             return hasher.digest(byteArray)
@@ -65,7 +65,7 @@ class Sha256Pool(
         }
     }
 
-    inline fun hasher(action: (hasher: Sha256Hasher) -> ByteArray): ByteArray {
+    public inline fun hasher(action: (hasher: Sha256Hasher) -> ByteArray): ByteArray {
         val hasher = acquire()
         try {
             return action(hasher)
@@ -82,7 +82,7 @@ class Sha256Pool(
      * @param bufferSize Size of chunks to read (default 8KB)
      * @return SHA256 hash bytes
      */
-    fun hashStream(
+    public fun hashStream(
         inputStream: InputStream,
         bufferSize: Int = 8192,
     ): ByteArray {

@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.crypto.mac
 
-actual class MacInstance actual constructor(
+public actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
     private var algorithm = HmacAlgorithm.of(algorithm)
     private var hmac = Hmac(this.algorithm.newDigest(), key)
 
-    actual fun init(
+    public actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
@@ -41,19 +41,19 @@ actual class MacInstance actual constructor(
         }
     }
 
-    actual fun getMacLength(): Int = hmac.macSize
+    public actual fun getMacLength(): Int = hmac.macSize
 
-    actual fun update(array: ByteArray) {
+    public actual fun update(array: ByteArray) {
         hmac.update(array)
     }
 
-    actual fun update(byte: Byte) {
+    public actual fun update(byte: Byte) {
         hmac.update(byte)
     }
 
-    actual fun doFinal(): ByteArray = hmac.doFinal()
+    public actual fun doFinal(): ByteArray = hmac.doFinal()
 
-    actual fun doFinal(
+    public actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {

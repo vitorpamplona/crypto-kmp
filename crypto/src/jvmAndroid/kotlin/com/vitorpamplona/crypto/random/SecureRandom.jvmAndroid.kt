@@ -27,16 +27,16 @@ import java.security.SecureRandom as JvmSecureRandom
  * `nextLong` a typealias would expose comes from `java.util.random.RandomGenerator`,
  * which Android only has from API 34, so the bounded draws are computed here instead.
  */
-actual class SecureRandom actual constructor() {
+public actual class SecureRandom actual constructor() {
     private val random = JvmSecureRandom()
 
-    actual fun nextInt(): Int = random.nextInt()
+    public actual fun nextInt(): Int = random.nextInt()
 
-    actual fun nextLong(): Long = random.nextLong()
+    public actual fun nextLong(): Long = random.nextLong()
 
-    actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { random.nextInt() }
+    public actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { random.nextInt() }
 
-    actual fun nextLong(bound: Long): Long = boundedNextLong(bound) { random.nextLong() }
+    public actual fun nextLong(bound: Long): Long = boundedNextLong(bound) { random.nextLong() }
 
-    actual fun nextBytes(output: ByteArray) = random.nextBytes(output)
+    public actual fun nextBytes(output: ByteArray): Unit = random.nextBytes(output)
 }

@@ -37,7 +37,7 @@ import com.vitorpamplona.crypto.equalsConstantTime
  * input is shorter than the tag or the tag does not verify, where [decryptOrNull] returns
  * null instead. No plaintext is produced before the tag verifies.
  */
-object ChaCha20Poly1305 {
+public object ChaCha20Poly1305 {
     private const val KEY_SIZE = 32
     private const val NONCE_SIZE = 12
     private const val TAG_SIZE = 16
@@ -51,7 +51,7 @@ object ChaCha20Poly1305 {
      * @param key 32-byte key
      * @return ciphertext || 16-byte tag
      */
-    fun encrypt(
+    public fun encrypt(
         plaintext: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,
@@ -82,7 +82,7 @@ object ChaCha20Poly1305 {
      * @return plaintext
      * @throws IllegalArgumentException if the input is shorter than the tag or the tag does not verify
      */
-    fun decrypt(
+    public fun decrypt(
         ciphertextWithTag: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,
@@ -98,7 +98,7 @@ object ChaCha20Poly1305 {
      * [decrypt], but returns null when the input is shorter than the tag or the tag does not
      * verify. A wrong key or nonce size still throws.
      */
-    fun decryptOrNull(
+    public fun decryptOrNull(
         ciphertextWithTag: ByteArray,
         ad: ByteArray,
         nonce: ByteArray,

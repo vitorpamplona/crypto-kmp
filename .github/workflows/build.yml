@@ -36,6 +36,11 @@ jobs:
       - name: Linter (gradle)
         run: ./gradlew spotlessCheck
 
+      # The public API must match crypto/api/: a change to it is deliberate (updateKotlinAbi) and
+      # visible in review, and a breaking one needs a major version.
+      - name: Check public API
+        run: ./gradlew :crypto:checkKotlinAbi
+
       - name: Check JVM and Android (host)
         run: ./gradlew :crypto:jvmTest :crypto:testAndroidHostTest
 

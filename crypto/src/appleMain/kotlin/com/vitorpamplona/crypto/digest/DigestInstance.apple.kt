@@ -49,7 +49,7 @@ import kotlin.native.ref.Cleaner
 import kotlin.native.ref.createCleaner
 
 /** SHA-1 and SHA-2 on CommonCrypto (hardware-accelerated); RIPEMD-160 in Kotlin. */
-actual class DigestInstance actual constructor(
+public actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
     private val digest: StreamingDigest =
@@ -60,13 +60,13 @@ actual class DigestInstance actual constructor(
             DigestAlgorithm.RIPEMD_160 -> kotlinStreamingDigest(known)
         }
 
-    actual fun update(array: ByteArray) = digest.update(array)
+    public actual fun update(array: ByteArray): Unit = digest.update(array)
 
-    actual fun update(byte: Byte) = digest.update(byte)
+    public actual fun update(byte: Byte): Unit = digest.update(byte)
 
-    actual fun digest(): ByteArray = digest.digest()
+    public actual fun digest(): ByteArray = digest.digest()
 
-    actual fun digest(input: ByteArray): ByteArray {
+    public actual fun digest(input: ByteArray): ByteArray {
         digest.update(input)
         return digest.digest()
     }

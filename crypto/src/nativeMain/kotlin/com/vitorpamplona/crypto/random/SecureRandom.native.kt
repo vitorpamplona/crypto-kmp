@@ -24,8 +24,8 @@ package com.vitorpamplona.crypto.random
  * The native [SecureRandom]: every draw is built from [fillSecureRandom], the platform's
  * entropy source, so Apple and Linux share one implementation of the rest.
  */
-actual class SecureRandom actual constructor() {
-    actual fun nextInt(): Int {
+public actual class SecureRandom actual constructor() {
+    public actual fun nextInt(): Int {
         val bytes = ByteArray(4)
         fillSecureRandom(bytes)
         return ((bytes[0].toInt() and 0xFF) shl 24) or
@@ -34,7 +34,7 @@ actual class SecureRandom actual constructor() {
             (bytes[3].toInt() and 0xFF)
     }
 
-    actual fun nextLong(): Long {
+    public actual fun nextLong(): Long {
         val bytes = ByteArray(8)
         fillSecureRandom(bytes)
         return ((bytes[0].toLong() and 0xFFL) shl 56) or
@@ -47,11 +47,11 @@ actual class SecureRandom actual constructor() {
             (bytes[7].toLong() and 0xFFL)
     }
 
-    actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { nextInt() }
+    public actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { nextInt() }
 
-    actual fun nextLong(bound: Long): Long = boundedNextLong(bound) { nextLong() }
+    public actual fun nextLong(bound: Long): Long = boundedNextLong(bound) { nextLong() }
 
-    actual fun nextBytes(output: ByteArray) {
+    public actual fun nextBytes(output: ByteArray) {
         if (output.isEmpty()) return
         fillSecureRandom(output)
     }

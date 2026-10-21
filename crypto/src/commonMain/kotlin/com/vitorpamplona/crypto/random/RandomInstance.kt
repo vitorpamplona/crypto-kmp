@@ -30,32 +30,32 @@ package com.vitorpamplona.crypto.random
  * val id = RandomInstance.randomChars()     // 16-char [a-zA-Z0-9] id
  * ```
  */
-object RandomInstance {
-    val randomizer = SecureRandom()
+public object RandomInstance {
+    private val randomizer = SecureRandom()
 
     /** A secure random [Int] across the full 32-bit range (may be negative). */
-    fun int() = randomizer.nextInt()
+    public fun int(): Int = randomizer.nextInt()
 
     /** A secure random [Long] across the full 64-bit range (may be negative). */
-    fun long() = randomizer.nextLong()
+    public fun long(): Long = randomizer.nextLong()
 
     /** A secure random [Int] in `0 until bound`. */
-    fun int(bound: Int) = randomizer.nextInt(bound)
+    public fun int(bound: Int): Int = randomizer.nextInt(bound)
 
     /** A secure random [Long] in `0 until bound`. */
-    fun long(bound: Long) = randomizer.nextLong(bound)
+    public fun long(bound: Long): Long = randomizer.nextLong(bound)
 
     /** [size] secure random bytes — the go-to for nonces, keys and salts. */
-    fun bytes(size: Int): ByteArray {
+    public fun bytes(size: Int): ByteArray {
         require(size >= 0) { "size must not be negative, was $size" }
         return ByteArray(size).also { randomizer.nextBytes(it) }
     }
 
-    val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+    public val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
     /** A single secure random alphanumeric char from [charPool]. */
-    fun randomChar() = charPool[randomizer.nextInt(charPool.size)]
+    public fun randomChar(): Char = charPool[randomizer.nextInt(charPool.size)]
 
     /** A secure random alphanumeric string of [size] chars — handy for random ids. */
-    fun randomChars(size: Int = 16) = CharArray(size) { randomChar() }.concatToString()
+    public fun randomChars(size: Int = 16): String = CharArray(size) { randomChar() }.concatToString()
 }

@@ -41,14 +41,14 @@ import com.vitorpamplona.crypto.random.RandomInstance
  * per RFC 7748 §6.1. The ladder relies on branch-free, mask-based selection
  * but, being pure Kotlin, carries no hardware constant-time guarantee.
  */
-object X25519 {
+public object X25519 {
     private const val KEY_LENGTH = 32
 
     /**
      * Generate a new X25519 key pair.
      * @return pair of (privateKey: 32 bytes, publicKey: 32 bytes)
      */
-    fun generateKeyPair(): X25519KeyPair {
+    public fun generateKeyPair(): X25519KeyPair {
         val privateKey = RandomInstance.bytes(KEY_LENGTH)
         val publicKey = publicFromPrivate(privateKey)
         return X25519KeyPair(privateKey, publicKey)
@@ -67,7 +67,7 @@ object X25519 {
      *   shared secret is all zeros, which happens exactly when [publicKey] is a
      *   point of small order (RFC 7748 §6.1). The check runs in constant time.
      */
-    fun dh(
+    public fun dh(
         privateKey: ByteArray,
         publicKey: ByteArray,
     ): ByteArray {
@@ -90,7 +90,7 @@ object X25519 {
      * @param privateKey 32-byte private key
      * @return 32-byte public key
      */
-    fun publicFromPrivate(privateKey: ByteArray): ByteArray {
+    public fun publicFromPrivate(privateKey: ByteArray): ByteArray {
         require(privateKey.size == KEY_LENGTH) { "Private key must be 32 bytes" }
         val basepoint = ByteArray(KEY_LENGTH)
         basepoint[0] = 9
@@ -191,7 +191,7 @@ object X25519 {
  * private keys are compared in constant time. [toString] prints no key bytes,
  * so a pair that ends up in a log or an exception message leaks nothing.
  */
-data class X25519KeyPair(
+public data class X25519KeyPair(
     val privateKey: ByteArray,
     val publicKey: ByteArray,
 ) {

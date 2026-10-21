@@ -26,7 +26,7 @@ package com.vitorpamplona.crypto.sha2
  * Use [sha256Into] on hot paths to avoid allocating a new array per call, and
  * [Sha256Digest] (or `MessageDigest` on the JVM) to hash a stream.
  */
-expect fun sha256(data: ByteArray): ByteArray
+public expect fun sha256(data: ByteArray): ByteArray
 
 /**
  * Allocation-free SHA-256: hash `data[0..len)` and write the 32-byte digest into `out`.
@@ -35,7 +35,7 @@ expect fun sha256(data: ByteArray): ByteArray
  *
  * @throws IllegalArgumentException if `out` is shorter than 32 bytes or `len` is outside `0..data.size`.
  */
-expect fun sha256Into(
+public expect fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int = data.size,

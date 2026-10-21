@@ -41,9 +41,9 @@ import platform.posix.size_tVar
  * added and checked by the common [cbcEncrypt] and [cbcDecrypt]: CCCrypt's own PKCS#7 check
  * accepts some invalid padding (a last byte above 16, for one), and its timing is unspecified.
  */
-actual class AESCBC actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val iv: ByteArray,
+public actual class AESCBC actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val iv: ByteArray,
 ) : SymmetricCipher {
     init {
         requireAesKey(keyBytes)

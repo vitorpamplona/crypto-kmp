@@ -23,10 +23,10 @@ package com.vitorpamplona.crypto.sha2
 import java.io.FilterInputStream
 import java.io.InputStream
 
-class CountingInputStream(
+public class CountingInputStream(
     inputStream: InputStream,
 ) : FilterInputStream(inputStream) {
-    var bytesRead: Long = 0
+    public var bytesRead: Long = 0
         private set
 
     override fun read(): Int {

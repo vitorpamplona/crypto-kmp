@@ -45,7 +45,7 @@ import com.vitorpamplona.crypto.random.RandomInstance
  * it rather than trusting the stored copy.
  * Public key format: 32-byte compressed Edwards point.
  */
-object Ed25519 {
+public object Ed25519 {
     private const val SEED_LENGTH = 32
     private const val PUBLIC_KEY_LENGTH = 32
 
@@ -53,7 +53,7 @@ object Ed25519 {
      * Generate a new Ed25519 key pair.
      * @return pair of (privateKey: 64 bytes seed+public, publicKey: 32 bytes)
      */
-    fun generateKeyPair(): Ed25519KeyPair {
+    public fun generateKeyPair(): Ed25519KeyPair {
         val seed = RandomInstance.bytes(SEED_LENGTH)
         val publicKey = derivePublicKey(seed)
         val privateKey = seed + publicKey
@@ -67,7 +67,7 @@ object Ed25519 {
      * @param privateKey 64-byte private key (seed + public key)
      * @return 64-byte Ed25519 signature
      */
-    fun sign(
+    public fun sign(
         message: ByteArray,
         privateKey: ByteArray,
     ): ByteArray {
@@ -135,7 +135,7 @@ object Ed25519 {
      * @return true if signature is valid; false for anything else, including a
      *   signature or public key of the wrong length.
      */
-    fun verify(
+    public fun verify(
         message: ByteArray,
         signature: ByteArray,
         publicKey: ByteArray,
@@ -182,7 +182,7 @@ object Ed25519 {
      * @param privateKey 64-byte private key (seed + public key)
      * @return 32-byte public key
      */
-    fun publicFromPrivate(privateKey: ByteArray): ByteArray {
+    public fun publicFromPrivate(privateKey: ByteArray): ByteArray {
         require(privateKey.size == SEED_LENGTH * 2) { "Private key must be 64 bytes (seed + public)" }
         val seed = privateKey.copyOfRange(0, SEED_LENGTH)
         val publicKey = derivePublicKey(seed)
@@ -202,7 +202,7 @@ object Ed25519 {
      * @param seed exactly 32 bytes. The public half is derived, never supplied,
      *   so a mismatched pair cannot be constructed here.
      */
-    fun keyPairFromSeed(seed: ByteArray): Ed25519KeyPair {
+    public fun keyPairFromSeed(seed: ByteArray): Ed25519KeyPair {
         require(seed.size == SEED_LENGTH) { "Ed25519 seed must be $SEED_LENGTH bytes, was ${seed.size}" }
         val publicKey = derivePublicKey(seed)
         return Ed25519KeyPair(seed + publicKey, publicKey)
@@ -571,7 +571,7 @@ object Ed25519 {
  * private keys are compared in constant time. [toString] prints no key bytes,
  * so a pair that ends up in a log or an exception message leaks nothing.
  */
-data class Ed25519KeyPair(
+public data class Ed25519KeyPair(
     val privateKey: ByteArray,
     val publicKey: ByteArray,
 ) {

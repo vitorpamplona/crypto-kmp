@@ -27,13 +27,13 @@ import com.vitorpamplona.crypto.mac.MacInstance
  * HKDF (RFC 5869) over the HMAC named by [algorithm]: HmacSHA1, HmacSHA256 or HmacSHA512.
  * Any other name throws [IllegalArgumentException].
  */
-class Hkdf(
-    val algorithm: String = "HmacSHA256",
+public class Hkdf(
+    public val algorithm: String = "HmacSHA256",
 ) {
     /** The HMAC's output size in bytes; [expand] produces at most `255 * hashLen` bytes. */
-    val hashLen: Int = HmacAlgorithm.of(algorithm).macLength
+    public val hashLen: Int = HmacAlgorithm.of(algorithm).macLength
 
-    fun extract(
+    public fun extract(
         key: ByteArray,
         salt: ByteArray,
     ): ByteArray {
@@ -42,7 +42,7 @@ class Hkdf(
         return mac.doFinal()
     }
 
-    fun extract(
+    public fun extract(
         key1: ByteArray,
         key2: ByteArray,
         salt: ByteArray,
@@ -62,7 +62,7 @@ class Hkdf(
      *
      * Output length is capped at `255 * hashLen` per RFC 5869.
      */
-    fun expand(
+    public fun expand(
         prk: ByteArray,
         info: ByteArray,
         length: Int,
@@ -101,7 +101,7 @@ class Hkdf(
      *   opaque context<0..255> = transcript hash bytes
      * and feeds it into [expand].
      */
-    fun expandLabel(
+    public fun expandLabel(
         prk: ByteArray,
         label: String,
         context: ByteArray,

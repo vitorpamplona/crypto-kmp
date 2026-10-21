@@ -37,9 +37,9 @@ private val threadLocalDigest: ThreadLocal<MessageDigest> =
         MessageDigest.getInstance("SHA-256")
     }
 
-actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get()!!.digest(data)
+public actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get()!!.digest(data)
 
-actual fun sha256Into(
+public actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,
@@ -68,7 +68,7 @@ actual fun sha256Into(
  * @param bufferSize Size of chunks to read (default 8KB)
  * @return Pair of (hash bytes, bytes read count)
  */
-fun sha256StreamWithCount(
+public fun sha256StreamWithCount(
     inputStream: InputStream,
     bufferSize: Int = 8192,
 ): Pair<ByteArray, Long> {

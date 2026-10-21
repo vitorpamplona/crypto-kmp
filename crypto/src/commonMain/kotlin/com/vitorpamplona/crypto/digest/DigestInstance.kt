@@ -27,14 +27,14 @@ package com.vitorpamplona.crypto.digest
  *
  * [digest] returns the hash and resets, ready for the next message.
  */
-expect class DigestInstance(
+public expect class DigestInstance(
     algorithm: String,
 ) {
-    fun update(array: ByteArray)
+    public fun update(array: ByteArray)
 
-    fun update(byte: Byte)
+    public fun update(byte: Byte)
 
-    fun digest(): ByteArray
+    public fun digest(): ByteArray
 
-    fun digest(input: ByteArray): ByteArray
+    public fun digest(input: ByteArray): ByteArray
 }

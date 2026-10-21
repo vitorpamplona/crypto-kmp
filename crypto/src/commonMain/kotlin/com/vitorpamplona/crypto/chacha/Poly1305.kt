@@ -37,7 +37,7 @@ package com.vitorpamplona.crypto.chacha
  * - r (first 16 bytes): clamped per spec, used as the multiplier
  * - s (last 16 bytes): added at the end
  */
-object Poly1305 {
+public object Poly1305 {
     /**
      * Compute a 16-byte Poly1305 MAC.
      *
@@ -46,7 +46,7 @@ object Poly1305 {
      * @return 16-byte authentication tag
      * @throws IllegalArgumentException if [key] is not 32 bytes
      */
-    fun mac(
+    public fun mac(
         message: ByteArray,
         key: ByteArray,
     ): ByteArray {

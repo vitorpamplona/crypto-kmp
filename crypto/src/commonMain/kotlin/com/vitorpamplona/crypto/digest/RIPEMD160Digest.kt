@@ -33,7 +33,7 @@ package com.vitorpamplona.crypto.digest
  *
  * @see [ripemd160](https://homes.esat.kuleuven.be/~bosselae/ripemd160.html)
  */
-class RIPEMD160Digest : GeneralDigest {
+public class RIPEMD160Digest : GeneralDigest {
     private var h0 = 0
     private var h1 = 0
     private var h2 = 0
@@ -46,7 +46,7 @@ class RIPEMD160Digest : GeneralDigest {
     /**
      * Standard constructor
      */
-    constructor() {
+    public constructor() {
         reset()
     }
 
@@ -55,7 +55,7 @@ class RIPEMD160Digest : GeneralDigest {
      * message digest.
      * @param t RIPEMD160Digest
      */
-    constructor(t: RIPEMD160Digest) : super(t) {
+    public constructor(t: RIPEMD160Digest) : super(t) {
         copyIn(t)
     }
 
@@ -596,7 +596,7 @@ class RIPEMD160Digest : GeneralDigest {
         }
     }
 
-    companion object {
+    public companion object {
         private const val DIGEST_LENGTH = 20
     }
 }

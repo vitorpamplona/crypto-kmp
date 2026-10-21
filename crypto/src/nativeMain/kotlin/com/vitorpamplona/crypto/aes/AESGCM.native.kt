@@ -26,9 +26,9 @@ import com.vitorpamplona.crypto.SymmetricCipher
  * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
  * Apple implementation that has one, CryptoKit, is Swift-only.
  */
-actual class AESGCM actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val nonce: ByteArray,
+public actual class AESGCM actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val nonce: ByteArray,
 ) : SymmetricCipher {
     init {
         requireGcmNonce(nonce)
@@ -49,7 +49,7 @@ actual class AESGCM actual constructor(
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = decryptOrNull(bytesToDecrypt, EMPTY)
 
-    actual fun encrypt(
+    public actual fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray {
@@ -57,12 +57,12 @@ actual class AESGCM actual constructor(
         return key.encrypt(fixedNonce, bytesToEncrypt, aad)
     }
 
-    actual fun decrypt(
+    public actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray = key.decrypt(fixedNonce, bytesToDecrypt, aad)
 
-    actual fun decryptOrNull(
+    public actual fun decryptOrNull(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
     ): ByteArray? =

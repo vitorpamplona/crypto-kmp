@@ -24,7 +24,7 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 
 /** SHA-1 and SHA-2 on JCA; RIPEMD-160, which the default JDK providers lack, in Kotlin. */
-actual class DigestInstance actual constructor(
+public actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
     private val digest: StreamingDigest =
@@ -33,13 +33,13 @@ actual class DigestInstance actual constructor(
             else -> JcaStreamingDigest(known.jcaName)
         }
 
-    actual fun update(array: ByteArray) = digest.update(array)
+    public actual fun update(array: ByteArray): Unit = digest.update(array)
 
-    actual fun update(byte: Byte) = digest.update(byte)
+    public actual fun update(byte: Byte): Unit = digest.update(byte)
 
-    actual fun digest(): ByteArray = digest.digest()
+    public actual fun digest(): ByteArray = digest.digest()
 
-    actual fun digest(input: ByteArray): ByteArray {
+    public actual fun digest(input: ByteArray): ByteArray {
         digest.update(input)
         return digest.digest()
     }

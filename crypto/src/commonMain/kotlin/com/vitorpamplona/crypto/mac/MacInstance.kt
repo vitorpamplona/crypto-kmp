@@ -27,29 +27,29 @@ package com.vitorpamplona.crypto.mac
  *
  * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.
  */
-expect class MacInstance(
+public expect class MacInstance(
     algorithm: String,
     key: ByteArray,
 ) {
     /** Re-keys, switching to [algorithm] if it differs, and drops any message in progress. */
-    fun init(
+    public fun init(
         key: ByteArray,
         algorithm: String,
     )
 
-    fun getMacLength(): Int
+    public fun getMacLength(): Int
 
-    fun update(array: ByteArray)
+    public fun update(array: ByteArray)
 
-    fun update(byte: Byte)
+    public fun update(byte: Byte)
 
-    fun doFinal(): ByteArray
+    public fun doFinal(): ByteArray
 
     /**
      * Writes the MAC into [output] at [offset]. Throws [IllegalArgumentException], leaving
      * the message in progress intact, when there is no room for [getMacLength] bytes.
      */
-    fun doFinal(
+    public fun doFinal(
         output: ByteArray,
         offset: Int = 0,
     )

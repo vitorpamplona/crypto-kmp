@@ -24,14 +24,14 @@ import java.security.NoSuchAlgorithmException
 import javax.crypto.Mac
 
 /** HMAC on JCA's `Mac`. */
-actual class MacInstance actual constructor(
+public actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
     private var algorithm = HmacAlgorithm.of(algorithm)
     private var mac: Mac = newMac(this.algorithm, key)
 
-    actual fun init(
+    public actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
@@ -46,15 +46,15 @@ actual class MacInstance actual constructor(
         }
     }
 
-    actual fun getMacLength() = mac.macLength
+    public actual fun getMacLength(): Int = mac.macLength
 
-    actual fun update(array: ByteArray) = mac.update(array)
+    public actual fun update(array: ByteArray): Unit = mac.update(array)
 
-    actual fun update(byte: Byte) = mac.update(byte)
+    public actual fun update(byte: Byte): Unit = mac.update(byte)
 
-    actual fun doFinal(): ByteArray = mac.doFinal()
+    public actual fun doFinal(): ByteArray = mac.doFinal()
 
-    actual fun doFinal(
+    public actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {

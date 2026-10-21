@@ -37,7 +37,7 @@ package com.vitorpamplona.crypto.digest
  *
  * Ported from Bouncy Castle's `KeccakDigest` (MIT).
  */
-class KeccakDigest : Digest {
+public class KeccakDigest : Digest {
     private var state: ByteArray = ByteArray((1600 / 8))
     private var dataQueue: ByteArray = ByteArray((1536 / 8))
     private var rate: Int = 0
@@ -61,12 +61,12 @@ class KeccakDigest : Digest {
      * Keccak with a [bitLength]-bit digest: 224, 256, 384 or 512 (and the non-standard
      * 128 and 288). Defaults to Keccak-256.
      */
-    constructor(bitLength: Int = 256) {
+    public constructor(bitLength: Int = 256) {
         init(bitLength)
     }
 
     /** A copy of [source] in its current state, to continue a shared prefix with different suffixes. */
-    constructor(source: KeccakDigest) {
+    public constructor(source: KeccakDigest) {
         source.state.copyInto(this.state, 0, 0, source.state.size)
         source.dataQueue.copyInto(this.dataQueue, 0, 0, source.dataQueue.size)
         this.rate = source.rate
@@ -466,7 +466,7 @@ class KeccakDigest : Digest {
         byteState.copyInto(data, 0, 0, laneCount * 8)
     }
 
-    companion object {
+    public companion object {
         private val KeccakRoundConstants: LongArray = keccakInitializeRoundConstants()
 
         private val KeccakRhoOffsets: IntArray = keccakInitializeRhoOffsets()

@@ -63,7 +63,7 @@ private class HmacSecrets {
 
 /** HMAC on CommonCrypto's CCHmac. Like JCA's `Mac`, [doFinal] leaves it keyed for the next message. */
 @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-actual class MacInstance actual constructor(
+public actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
@@ -82,7 +82,7 @@ actual class MacInstance actual constructor(
         rearm()
     }
 
-    actual fun init(
+    public actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
@@ -94,18 +94,18 @@ actual class MacInstance actual constructor(
         rearm()
     }
 
-    actual fun getMacLength(): Int = hmacAlgorithm.macLength
+    public actual fun getMacLength(): Int = hmacAlgorithm.macLength
 
-    actual fun update(array: ByteArray) {
+    public actual fun update(array: ByteArray) {
         if (array.isEmpty()) return
         array.usePinned { CCHmacUpdate(secrets.context, it.addressOf(0), array.size.convert()) }
     }
 
-    actual fun update(byte: Byte) = update(byteArrayOf(byte))
+    public actual fun update(byte: Byte): Unit = update(byteArrayOf(byte))
 
-    actual fun doFinal(): ByteArray = ByteArray(getMacLength()).also { doFinal(it, 0) }
+    public actual fun doFinal(): ByteArray = ByteArray(getMacLength()).also { doFinal(it, 0) }
 
-    actual fun doFinal(
+    public actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {

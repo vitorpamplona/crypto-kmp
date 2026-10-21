@@ -24,7 +24,7 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.random.RandomInstance
 
 /** The name AES-CBC ciphers report from [SymmetricCipher.name]. */
-const val AES_CBC_NAME = "aes-cbc"
+public const val AES_CBC_NAME: String = "aes-cbc"
 
 /**
  * AES-CBC (NIST SP 800-38A) with PKCS#7 padding, under one key and one IV: the bytes of JCA's
@@ -50,12 +50,12 @@ const val AES_CBC_NAME = "aes-cbc"
  * bytes, or has bad padding, on every platform; [decryptOrNull] returns null in exactly those
  * cases.
  */
-expect class AESCBC(
+public expect class AESCBC(
     keyBytes: ByteArray = RandomInstance.bytes(32),
     iv: ByteArray = RandomInstance.bytes(16),
 ) : SymmetricCipher {
-    val keyBytes: ByteArray
-    val iv: ByteArray
+    public val keyBytes: ByteArray
+    public val iv: ByteArray
 
     override fun name(): String
 

@@ -25,7 +25,7 @@ import javax.crypto.SecretKey
 /**
  * Simple key spec that doesn't clone the key bytearray
  */
-class FixedKey(
+internal class FixedKey(
     val key: ByteArray,
     val algo: String,
 ) : SecretKey {

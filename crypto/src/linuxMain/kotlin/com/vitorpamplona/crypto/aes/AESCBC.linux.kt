@@ -22,9 +22,9 @@ package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.SymmetricCipher
 
-actual class AESCBC actual constructor(
-    actual val keyBytes: ByteArray,
-    actual val iv: ByteArray,
+public actual class AESCBC actual constructor(
+    public actual val keyBytes: ByteArray,
+    public actual val iv: ByteArray,
 ) : SymmetricCipher {
     init {
         requireCbcIv(iv)

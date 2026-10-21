@@ -28,7 +28,7 @@ import platform.CoreCrypto.CC_SHA256
 import platform.CoreCrypto.CC_SHA256_DIGEST_LENGTH
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun sha256(data: ByteArray): ByteArray {
+public actual fun sha256(data: ByteArray): ByteArray {
     val digest = UByteArray(CC_SHA256_DIGEST_LENGTH)
 
     data.usePinned { inputPinned ->
@@ -46,7 +46,7 @@ actual fun sha256(data: ByteArray): ByteArray {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun sha256Into(
+public actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,

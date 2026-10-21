@@ -37,7 +37,7 @@ package com.vitorpamplona.crypto.chacha
  * - RFC 8439: ChaCha20 and Poly1305
  * - draft-irtf-cfrg-xchacha: XChaCha20 (HChaCha20 + ChaCha20)
  */
-object ChaCha20Core {
+public object ChaCha20Core {
     // "expand 32-byte k" as little-endian integers
     private const val SIGMA0 = 0x61707865
     private const val SIGMA1 = 0x3320646e
@@ -142,7 +142,7 @@ object ChaCha20Core {
      * @param nonce 12-byte nonce (IETF variant)
      * @return 64-byte keystream block
      */
-    fun chaCha20Block(
+    public fun chaCha20Block(
         key: ByteArray,
         counter: Int,
         nonce: ByteArray,
@@ -173,7 +173,7 @@ object ChaCha20Core {
      *   32-bit (see [ChaCha20Core]); the message must end by block 2^32 - 1
      * @return XOR'd output (same length as message)
      */
-    fun chaCha20Xor(
+    public fun chaCha20Xor(
         message: ByteArray,
         key: ByteArray,
         nonce: ByteArray,
@@ -269,7 +269,7 @@ object ChaCha20Core {
      * @param input 16-byte input (first 16 bytes of the 24-byte XChaCha20 nonce)
      * @return 32-byte subkey
      */
-    fun hChaCha20(
+    public fun hChaCha20(
         key: ByteArray,
         input: ByteArray,
     ): ByteArray {
@@ -371,7 +371,7 @@ object ChaCha20Core {
      * @param key 32-byte key
      * @return XOR'd output (same length as message)
      */
-    fun xChaCha20Xor(
+    public fun xChaCha20Xor(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,

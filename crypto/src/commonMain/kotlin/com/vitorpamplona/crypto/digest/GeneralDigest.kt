@@ -32,7 +32,7 @@ package com.vitorpamplona.crypto.digest
  *
  * Ported from Bouncy Castle's `GeneralDigest` (MIT).
  */
-abstract class GeneralDigest : Digest {
+public abstract class GeneralDigest : Digest {
     private val xBuf = ByteArray(4)
     private var xBufOff = 0
 

@@ -1,6 +1,7 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -9,6 +10,13 @@ plugins {
 }
 
 kotlin {
+    // A library: every public declaration is a choice, and the ABI dump in api/ records it,
+    // so a breaking change shows up in review (and in a major version) instead of by accident.
+    explicitApi()
+
+    @OptIn(ExperimentalAbiValidation::class)
+    abiValidation()
+
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
