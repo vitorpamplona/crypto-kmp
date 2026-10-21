@@ -122,8 +122,8 @@ object Ed25519 {
     /**
      * Verify an Ed25519 signature.
      *
-     * Beyond the RFC 8032 equation, this rejects what libsodium rejects, so a
-     * signature accepted here is accepted there too:
+     * Beyond the cofactorless RFC 8032 equation [S]B = R + [k]A, this rejects
+     * what libsodium rejects:
      * - S must be below L, so S + L is not a second valid signature;
      * - A and R must be canonical encodings: y below p, and no sign bit on x = 0;
      * - A and R must not have small order, where [8]P is the identity. A
@@ -150,8 +150,8 @@ object Ed25519 {
 
         val aPoint = unpackPoint(publicKey) ?: return false
         if (hasSmallOrder(aPoint)) return false
-        // R is only compared as bytes below, but a small-order R is what lets
-        // a mixed-order key pass, so it is decoded and checked like A.
+        // R is compared as bytes at the end, which already rules out a
+        // non-canonical R; decoding it here also rules out a small-order one.
         val rPoint = unpackPoint(rBytes) ?: return false
         if (hasSmallOrder(rPoint)) return false
 
