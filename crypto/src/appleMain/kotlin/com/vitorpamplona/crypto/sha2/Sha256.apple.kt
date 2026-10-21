@@ -51,11 +51,13 @@ actual fun sha256Into(
     data: ByteArray,
     len: Int,
 ): ByteArray {
+    // CC_SHA256 trusts len and writes 32 bytes blindly, so the bounds are checked here.
+    checkSha256IntoArgs(out, data, len)
     data.usePinned { inputPinned ->
         out.asUByteArray().usePinned { digestPinned ->
             CC_SHA256(
                 // addressOf(0) throws on an empty array; CommonCrypto accepts null for a 0-byte input.
-                if (data.isEmpty()) null else inputPinned.addressOf(0),
+                if (len == 0) null else inputPinned.addressOf(0),
                 len.convert(),
                 digestPinned.addressOf(0),
             )

@@ -63,5 +63,10 @@ class FixedKey(
 
     override fun destroy() = key.fill(0)
 
-    override fun isDestroyed() = key.all { it.toInt() == 0 }
+    override fun isDestroyed(): Boolean {
+        // OR every byte together rather than stopping at the first non-zero one.
+        var any = 0
+        for (byte in key) any = any or byte.toInt()
+        return any == 0
+    }
 }

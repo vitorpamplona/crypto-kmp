@@ -20,10 +20,18 @@
  */
 package com.vitorpamplona.crypto.mac
 
+/**
+ * HMAC (RFC 2104) keyed with `key`. Supports exactly HmacSHA1, HmacSHA256 and HmacSHA512
+ * on every platform, matching names ignoring case; any other name throws
+ * [IllegalArgumentException]. Any key length works, including an empty key.
+ *
+ * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.
+ */
 expect class MacInstance(
     algorithm: String,
     key: ByteArray,
 ) {
+    /** Re-keys, switching to [algorithm] if it differs, and drops any message in progress. */
     fun init(
         key: ByteArray,
         algorithm: String,
@@ -37,6 +45,10 @@ expect class MacInstance(
 
     fun doFinal(): ByteArray
 
+    /**
+     * Writes the MAC into [output] at [offset]. Throws [IllegalArgumentException], leaving
+     * the message in progress intact, when there is no room for [getMacLength] bytes.
+     */
     fun doFinal(
         output: ByteArray,
         offset: Int = 0,

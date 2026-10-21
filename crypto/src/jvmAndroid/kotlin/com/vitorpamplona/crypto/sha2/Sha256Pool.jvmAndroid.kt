@@ -21,12 +21,19 @@
 package com.vitorpamplona.crypto.sha2
 
 import java.io.InputStream
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.concurrent.ArrayBlockingQueue
 
+/** A fixed set of [Sha256Hasher]s shared between threads. */
 class Sha256Pool(
     size: Int,
 ) {
     private val pool = ArrayBlockingQueue<Sha256Hasher>(size)
+
+    // The hashers handed out and not yet released. Only one release of a hasher can take it
+    // out of here, so releasing twice cannot put it in the queue twice.
+    private val checkedOut = Collections.synchronizedSet(Collections.newSetFromMap(IdentityHashMap<Sha256Hasher, Boolean>()))
 
     init {
         repeat(size) {
@@ -35,11 +42,18 @@ class Sha256Pool(
     }
 
     /** Blocks until a digest is free. */
-    fun acquire(): Sha256Hasher = pool.take()
+    fun acquire(): Sha256Hasher = pool.take().also { checkedOut.add(it) }
 
+    /**
+     * Resets [digest] and returns it to the pool. Never blocks. Releasing a hasher that
+     * is not checked out, because it was already released or came from somewhere else,
+     * does nothing.
+     */
     fun release(digest: Sha256Hasher) {
+        if (!checkedOut.remove(digest)) return
         digest.reset()
-        pool.put(digest)
+        // Always room: the queue holds every hasher this pool made except the checked-out ones.
+        pool.offer(digest)
     }
 
     fun hash(byteArray: ByteArray): ByteArray {

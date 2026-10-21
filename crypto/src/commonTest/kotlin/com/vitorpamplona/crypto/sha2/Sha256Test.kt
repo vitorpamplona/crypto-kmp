@@ -22,6 +22,7 @@ package com.vitorpamplona.crypto.sha2
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * Known-answer vectors (FIPS 180-2) for every platform's sha256 actual. The empty
@@ -54,5 +55,26 @@ class Sha256Test {
         val out = ByteArray(32)
         assertEquals(abcDigest, sha256Into(out, "abcdef".encodeToByteArray(), 3).hex())
         assertEquals(emptyDigest, sha256Into(out, "abcdef".encodeToByteArray(), 0).hex())
+    }
+
+    @Test
+    fun sha256IntoWritesTheFirst32BytesOfALongerOut() {
+        val out = ByteArray(40)
+        sha256Into(out, "abc".encodeToByteArray())
+        assertEquals(abcDigest, out.copyOfRange(0, 32).hex())
+    }
+
+    @Test
+    fun sha256IntoRejectsBadArgumentsAndStaysCorrect() {
+        val data = "abcdef".encodeToByteArray()
+        // Every platform throws the same exception, before touching out or any shared state.
+        assertFailsWith<IllegalArgumentException> { sha256Into(ByteArray(31), data, 3) }
+        assertFailsWith<IllegalArgumentException> { sha256Into(ByteArray(0), data, 3) }
+        assertFailsWith<IllegalArgumentException> { sha256Into(ByteArray(32), data, -1) }
+        assertFailsWith<IllegalArgumentException> { sha256Into(ByteArray(32), data, 7) }
+        assertFailsWith<IllegalArgumentException> { sha256Into(ByteArray(32), ByteArray(0), 1) }
+        // On the JVM a failed call used to leave its data in the thread's digest.
+        assertEquals(abcDigest, sha256("abc".encodeToByteArray()).hex())
+        assertEquals(abcDigest, sha256Into(ByteArray(32), data, 3).hex())
     }
 }
