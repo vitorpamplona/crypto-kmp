@@ -5,8 +5,11 @@ library depends on nothing but the Kotlin stdlib. It uses the platform's impleme
 one is fast and available (JCA on the JVM and Android, CommonCrypto on Apple) and pure Kotlin
 everywhere else. The AES and GHASH cores are constant-time.
 
-It is the crypto layer of [Quartz](https://github.com/vitorpamplona/amethyst/tree/main/quartz)
-(the Nostr library behind Amethyst) and of [quic-kmp](https://github.com/vitorpamplona/quic-kmp).
+It is the crypto layer of [Quartz](https://github.com/vitorpamplona/quartz) (the Nostr library
+behind Amethyst), [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (the MLS engine under
+[marmot-kmp](https://github.com/vitorpamplona/marmot-kmp) and
+[cordn-kmp](https://github.com/vitorpamplona/cordn-kmp)) and
+[quic-kmp](https://github.com/vitorpamplona/quic-kmp).
 
 ## Install
 
