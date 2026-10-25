@@ -58,8 +58,10 @@ jobs:
       - name: Check
         run: ./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsTest :crypto:wasmJsTest :crypto:compileAppleMainKotlinMetadata
 
+      # The library only: the unpublished benchmark module's npm and Maven dependencies
+      # mustn't be able to block a release.
       - name: Build (gradle)
-        run: ./gradlew assemble
+        run: ./gradlew :crypto:assemble
 
       # Tag v1.2.3 publishes version 1.2.3.
       - name: Set version for tag

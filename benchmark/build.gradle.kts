@@ -22,7 +22,9 @@ kotlin {
     }
 
     js {
-        nodejs()
+        // As in :crypto: Kotlin/JS emulates Long, and its AES-GCM and Curve25519 checks in
+        // SameOutputJsTest can outlast Mocha's default 2s.
+        nodejs { testTask { useMocha { timeout = "10m" } } }
     }
 
     @OptIn(ExperimentalWasmDsl::class)

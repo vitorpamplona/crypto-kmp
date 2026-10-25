@@ -14,7 +14,7 @@ echo "Running test... "
 
 # The same checks as CI's build job. The Apple tests need a Mac; CI's test-apple job runs them.
 # JS and Wasm run here in Node.js only; CI also runs them in headless Chrome.
-./gradlew spotlessCheck :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsNodeTest :crypto:wasmJsNodeTest :crypto:compileAppleMainKotlinMetadata
+./gradlew spotlessCheck :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsNodeTest :crypto:wasmJsNodeTest :crypto:compileAppleMainKotlinMetadata :benchmark:jvmTest :benchmark:jsNodeTest
 
 status=$?
 
