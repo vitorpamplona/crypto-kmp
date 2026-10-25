@@ -2,6 +2,9 @@
 agp = "9.4.1"
 android-compileSdk = "37"
 android-minSdk = "26"
+androidxBenchmark = "1.5.0"
+androidxTestJunit = "1.3.0"
+androidxTestRunner = "1.7.0"
 bouncycastle = "1.83"
 kotlin = "2.4.21"
 kotlinxBenchmark = "0.5.0"
@@ -9,12 +12,17 @@ mavenPublish = "0.37.0"
 spotless = "8.10.4"
 
 [libraries]
+androidx-benchmark-junit4 = { module = "androidx.benchmark:benchmark-junit4", version.ref = "androidxBenchmark" }
+androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
 
 [plugins]
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+androidxBenchmark = { id = "androidx.benchmark", version.ref = "androidxBenchmark" }
 diffplugSpotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlinAllOpen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

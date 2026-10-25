@@ -23,12 +23,16 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 - `benchmark/` — not published: kotlinx-benchmark against JCA and Bouncy Castle (JVM) and noble,
   TweetNaCl and node:crypto (JS), plus Wasm; results and the improvement list in `BENCHMARKS.md`.
   Its dependencies stay in that module; its tests check every library gives the same bytes.
+- `benchmark-android/` — not published either: Jetpack Microbenchmark on a device, crypto-kmp
+  against Android's JCA (AndroidOpenSSL) and Bouncy Castle, with the same operations and a
+  same-bytes test. It needs a physical device for numbers; CI dry-runs it on an emulator.
 - `scripts/wycheproof/generate.py` — turns Wycheproof's JSON into `commonTest` data; never edit
   the generated `Wycheproof*.kt` by hand.
 
 ## Rules
 
-- **No dependencies** beyond the Kotlin stdlib (and `kotlin-test` for tests). That is the point
+- **No dependencies** beyond the Kotlin stdlib (and, for tests, `kotlin-test`, plus AndroidX
+  Test's runner and JUnit extension for the Android device tests). That is the point
   of the library: depending on it never brings anything else onto a classpath. A new dependency
   needs its license checked against its actual `LICENSE` file first, and a very good reason.
 - **No Nostr, no app concerns.** No protocol names, no NIP references, no logging: a primitive
@@ -55,6 +59,9 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   `assertTrue`, not `assert`.
 - Apple code compiles on Linux as metadata (`:crypto:compileAppleMainKotlinMetadata`) but runs
   only on macOS: CI's `test-apple` job is where the CommonCrypto actuals execute.
+- Android's own providers (AndroidOpenSSL) run only on a device: the host tests use the desktop
+  JDK's. `androidDeviceTest` compiles commonTest (its tree is "test") plus a few Android-only
+  checks, and CI's `test-android` job runs it on emulators at API 26 (minSdk) and 34.
 - Code ported from elsewhere keeps its attribution (the AES and GHASH cores are BearSSL's, MIT).
 - JVM target is 17: Quartz targets 17, and a dependency can't need a newer JVM than its user.
 - Before pushing: `./gradlew spotlessApply`, then

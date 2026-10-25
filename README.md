@@ -152,6 +152,7 @@ Kotlin/JS is several times slower than noble, so prefer `wasmJs` on the web.
 ./gradlew :crypto:compileAppleMainKotlinMetadata   # Apple code, compiled on any host
 ./gradlew :crypto:checkKotlinAbi    # public API matches crypto/api; updateKotlinAbi to accept a change
 ./gradlew :crypto:iosSimulatorArm64Test :crypto:macosArm64Test   # macOS only
+./gradlew :crypto:connectedAndroidDeviceTest   # the shared tests on a connected Android device or emulator
 ```
 
 ## Versioning
