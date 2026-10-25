@@ -33,7 +33,7 @@ dependencies {
 | RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin | Kotlin |
 | HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin | Kotlin |
 | HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
-| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | Kotlin, constant-time | Kotlin, constant-time | Kotlin, constant-time |
+| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | CommonCrypto AES-CTR, Kotlin GHASH (constant-time) | Kotlin, constant-time | Kotlin, constant-time |
 | AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time | Kotlin, constant-time |
 | ChaCha20, Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
 | X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin | Kotlin |

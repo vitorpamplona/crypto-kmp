@@ -29,7 +29,8 @@ public const val AES_GCM_NAME: String = "aes-gcm"
 /**
  * AES-GCM (NIST SP 800-38D) with a 128-bit tag, under one key and one nonce. The output of
  * [encrypt] is the ciphertext followed by the tag, the layout of JCA's "AES/GCM/NoPadding".
- * JCA on the JVM and Android; a constant-time Kotlin implementation everywhere else.
+ * JCA on the JVM and Android; on Apple, CommonCrypto's AES-CTR (the CPU's AES instructions) with
+ * the constant-time Kotlin GHASH; a constant-time Kotlin implementation on Linux and the web.
  *
  * **One message per instance.** The nonce is fixed for the instance's life, and encrypting two
  * messages under the same key and nonce reveals the XOR of their plaintexts and lets anyone forge

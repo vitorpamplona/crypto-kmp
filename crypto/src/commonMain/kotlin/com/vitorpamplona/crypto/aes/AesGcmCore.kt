@@ -44,6 +44,57 @@ internal class NonceGuard {
 }
 
 /**
+ * One AES key's GCM (NIST SP 800-38D, 128-bit tag): ciphertext followed by the tag, JCA's
+ * "AES/GCM/NoPadding" layout. [AesGcmKey] runs it on the bitsliced AES; [CtrGcmKey] on a
+ * platform's AES-CTR. [decrypt] throws [IllegalArgumentException] when the tag fails.
+ */
+internal interface GcmKey {
+    fun encrypt(
+        nonce: ByteArray,
+        plaintext: ByteArray,
+        aad: ByteArray,
+    ): ByteArray
+
+    fun decrypt(
+        nonce: ByteArray,
+        input: ByteArray,
+        aad: ByteArray,
+    ): ByteArray
+}
+
+/** The pre-counter block J0 for [nonce] (SP 800-38D §7.1); [hashKey] is asked for only off the 12-byte path. */
+internal inline fun gcmJ0(
+    nonce: ByteArray,
+    hashKey: () -> ByteArray,
+): ByteArray {
+    requireGcmNonce(nonce)
+    if (nonce.size == 12) return nonce.copyOf(16).also { it[15] = 1 }
+    val ghash = Ghash(hashKey())
+    ghash.update(nonce)
+    ghash.updateLengths(0, nonce.size.toLong() * 8)
+    return ByteArray(16).also { ghash.digestInto(it) }
+}
+
+/** The tag: GHASH over the AAD and the first [ciphertextLength] bytes of [ciphertext], masked with E(J0). */
+internal fun gcmTag(
+    hashKey: ByteArray,
+    encryptedJ0: ByteArray,
+    aad: ByteArray,
+    ciphertext: ByteArray,
+    ciphertextLength: Int,
+): ByteArray {
+    val ghash = Ghash(hashKey)
+    ghash.update(aad)
+    ghash.update(ciphertext, 0, ciphertextLength)
+    ghash.updateLengths(aad.size.toLong() * 8, ciphertextLength.toLong() * 8)
+    val s = ByteArray(16).also { ghash.digestInto(it) }
+    for (i in 0 until 16) {
+        s[i] = (s[i].toInt() xor encryptedJ0[i].toInt()).toByte()
+    }
+    return s
+}
+
+/**
  * AES-GCM (NIST SP 800-38D) with a 128-bit tag, on [AesBitsliced] and [Ghash]. Output
  * is ciphertext followed by the tag, the same layout JCA's "AES/GCM/NoPadding" uses.
  * Any non-empty nonce length works; a 12-byte one takes the spec's fast path for J0.
@@ -57,7 +108,7 @@ internal class NonceGuard {
  */
 internal class AesGcmKey(
     key: ByteArray,
-) {
+) : GcmKey {
     private val aes = AesBitsliced(key)
 
     // H = E(0^128). With a 12-byte nonce the first counter batch computes it alongside E(J0),
@@ -76,11 +127,11 @@ internal class AesGcmKey(
                 computedHashKey = it
             }
 
-    fun encrypt(
+    override fun encrypt(
         nonce: ByteArray,
         plaintext: ByteArray,
         aad: ByteArray,
-    ): ByteArray = encryptFromJ0(j0(nonce), plaintext, aad)
+    ): ByteArray = encryptFromJ0(gcmJ0(nonce) { hashKey }, plaintext, aad)
 
     /** [encrypt] from the pre-counter block J0 itself, so a test can start the counter anywhere. */
     fun encryptFromJ0(
@@ -97,13 +148,13 @@ internal class AesGcmKey(
     }
 
     /** Throws [IllegalArgumentException] when the tag does not verify; no plaintext is returned then. */
-    fun decrypt(
+    override fun decrypt(
         nonce: ByteArray,
         input: ByteArray,
         aad: ByteArray,
     ): ByteArray {
         require(input.size >= TAG_LENGTH) { "AES-GCM input is shorter than its tag" }
-        val call = Call(j0(nonce))
+        val call = Call(gcmJ0(nonce) { hashKey })
         val ciphertextLength = input.size - TAG_LENGTH
         val out = ByteArray(ciphertextLength)
         call.ctr(input, ciphertextLength, out)
@@ -116,16 +167,6 @@ internal class AesGcmKey(
             throw IllegalArgumentException("AES-GCM authentication failed")
         }
         return out
-    }
-
-    /** The pre-counter block J0 for [nonce] (SP 800-38D §7.1). */
-    private fun j0(nonce: ByteArray): ByteArray {
-        requireGcmNonce(nonce)
-        if (nonce.size == 12) return nonce.copyOf(16).also { it[15] = 1 }
-        val ghash = Ghash(hashKey)
-        ghash.update(nonce)
-        ghash.updateLengths(0, nonce.size.toLong() * 8)
-        return ByteArray(16).also { ghash.digestInto(it) }
     }
 
     /** One encryption or decryption: its J0, the E(J0) the counter pass produces, and scratch. */
@@ -195,17 +236,7 @@ internal class AesGcmKey(
             aad: ByteArray,
             ciphertext: ByteArray,
             ciphertextLength: Int,
-        ): ByteArray {
-            val ghash = Ghash(hashKey)
-            ghash.update(aad)
-            ghash.update(ciphertext, 0, ciphertextLength)
-            ghash.updateLengths(aad.size.toLong() * 8, ciphertextLength.toLong() * 8)
-            val s = ByteArray(16).also { ghash.digestInto(it) }
-            for (i in 0 until 16) {
-                s[i] = (s[i].toInt() xor encryptedJ0[i].toInt()).toByte()
-            }
-            return s
-        }
+        ): ByteArray = gcmTag(hashKey, encryptedJ0, aad, ciphertext, ciphertextLength)
 
         /** Zeroes the scratch and E(J0) once the call is done with them. */
         fun clear() {
