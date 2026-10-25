@@ -15,3 +15,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "crypto-kmp"
 include(":crypto")
+
+// Not published: JMH and benchmark.js runs against JCA, Bouncy Castle, noble and node:crypto.
+include(":benchmark")

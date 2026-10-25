@@ -53,6 +53,11 @@ jobs:
       - name: Check JavaScript and Wasm
         run: ./gradlew :crypto:jsTest :crypto:wasmJsTest
 
+      # The benchmark module's tests: every compared library (JCA, Bouncy Castle, noble,
+      # TweetNaCl, node:crypto) gives this library's bytes for each benchmarked operation.
+      - name: Check benchmarks compute the same bytes
+        run: ./gradlew :benchmark:jvmTest :benchmark:jsNodeTest
+
       # Apple code compiles on Linux as metadata, so a CommonCrypto mistake fails here in
       # minutes instead of in the macOS job.
       - name: Check Apple code compiles
