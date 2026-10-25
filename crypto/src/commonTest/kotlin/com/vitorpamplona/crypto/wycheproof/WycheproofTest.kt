@@ -105,6 +105,9 @@ class WycheproofTest {
     fun hmacSha256() = hmac("HmacSHA256", HMAC_SHA256_VECTORS)
 
     @Test
+    fun hmacSha384() = hmac("HmacSHA384", HMAC_SHA384_VECTORS)
+
+    @Test
     fun hmacSha512() = hmac("HmacSHA512", HMAC_SHA512_VECTORS)
 
     @Test
@@ -112,6 +115,9 @@ class WycheproofTest {
 
     @Test
     fun hkdfSha256() = hkdf("HmacSHA256", HKDF_SHA256_VECTORS)
+
+    @Test
+    fun hkdfSha384() = hkdf("HmacSHA384", HKDF_SHA384_VECTORS)
 
     @Test
     fun hkdfSha512() = hkdf("HmacSHA512", HKDF_SHA512_VECTORS)

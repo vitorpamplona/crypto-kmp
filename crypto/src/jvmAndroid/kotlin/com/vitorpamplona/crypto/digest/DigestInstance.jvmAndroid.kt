@@ -24,14 +24,15 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 
 /** SHA-1 and SHA-2 on JCA; RIPEMD-160, which the default JDK providers lack, in Kotlin. */
-public actual class DigestInstance actual constructor(
-    algorithm: String,
+public actual class DigestInstance private constructor(
+    private val digest: StreamingDigest,
 ) {
-    private val digest: StreamingDigest =
+    public actual constructor(algorithm: String) : this(
         when (val known = DigestAlgorithm.of(algorithm)) {
             DigestAlgorithm.RIPEMD_160 -> kotlinStreamingDigest(known)
-            else -> JcaStreamingDigest(known.jcaName)
-        }
+            else -> JcaStreamingDigest(jcaDigest(known.jcaName))
+        },
+    )
 
     public actual fun update(array: ByteArray): Unit = digest.update(array)
 
@@ -43,21 +44,31 @@ public actual class DigestInstance actual constructor(
         digest.update(input)
         return digest.digest()
     }
+
+    public actual fun copy(): DigestInstance = DigestInstance(digest.copy())
 }
 
-private class JcaStreamingDigest(
-    jcaName: String,
-) : StreamingDigest {
-    private val md =
-        try {
-            MessageDigest.getInstance(jcaName)
-        } catch (e: NoSuchAlgorithmException) {
-            throw IllegalArgumentException("Unsupported digest algorithm: $jcaName", e)
-        }
+private fun jcaDigest(jcaName: String): MessageDigest =
+    try {
+        MessageDigest.getInstance(jcaName)
+    } catch (e: NoSuchAlgorithmException) {
+        throw IllegalArgumentException("Unsupported digest algorithm: $jcaName", e)
+    }
 
+private class JcaStreamingDigest(
+    private val md: MessageDigest,
+) : StreamingDigest {
     override fun update(array: ByteArray) = md.update(array)
 
     override fun update(byte: Byte) = md.update(byte)
 
     override fun digest(): ByteArray = md.digest()
+
+    // SunJCE and Conscrypt both clone their SHA digests; one that can't is no use for a transcript.
+    override fun copy(): StreamingDigest =
+        try {
+            JcaStreamingDigest(md.clone() as MessageDigest)
+        } catch (e: CloneNotSupportedException) {
+            throw IllegalStateException("${md.algorithm} from ${md.provider.name} can't be copied", e)
+        }
 }

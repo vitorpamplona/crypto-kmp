@@ -131,6 +131,7 @@ public abstract interface class com/vitorpamplona/crypto/digest/Digest {
 
 public final class com/vitorpamplona/crypto/digest/DigestInstance {
 	public fun <init> (Ljava/lang/String;)V
+	public final fun copy ()Lcom/vitorpamplona/crypto/digest/DigestInstance;
 	public final fun digest ()[B
 	public final fun digest ([B)[B
 	public final fun update (B)V
@@ -264,5 +265,9 @@ public final class com/vitorpamplona/crypto/sha2/Sha256_jvmAndroidKt {
 	public static synthetic fun sha256Into$default ([B[BIILjava/lang/Object;)[B
 	public static final fun sha256StreamWithCount (Ljava/io/InputStream;I)Lkotlin/Pair;
 	public static synthetic fun sha256StreamWithCount$default (Ljava/io/InputStream;IILjava/lang/Object;)Lkotlin/Pair;
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha384Kt {
+	public static final fun sha384 ([B)[B
 }
 

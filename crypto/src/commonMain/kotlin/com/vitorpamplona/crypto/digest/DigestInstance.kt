@@ -21,11 +21,14 @@
 package com.vitorpamplona.crypto.digest
 
 /**
- * An incremental message digest. Supports exactly SHA-1, SHA-256, SHA-512 and RIPEMD-160,
- * on every platform. Names match ignoring case, with or without the dash (`SHA-256`,
- * `sha256`, `RIPEMD-160`, `ripemd160`); any other name throws [IllegalArgumentException].
+ * An incremental message digest. Supports exactly SHA-1, SHA-256, SHA-384, SHA-512 and
+ * RIPEMD-160, on every platform. Names match ignoring case, with or without the dash
+ * (`SHA-256`, `sha256`, `RIPEMD-160`, `ripemd160`); any other name throws
+ * [IllegalArgumentException].
  *
- * [digest] returns the hash and resets, ready for the next message.
+ * [digest] returns the hash and resets, ready for the next message. [copy] snapshots the state
+ * without finishing it, as a TLS transcript hash needs: the digest of the messages so far, while
+ * the original carries on.
  */
 public expect class DigestInstance(
     algorithm: String,
@@ -37,4 +40,10 @@ public expect class DigestInstance(
     public fun digest(): ByteArray
 
     public fun digest(input: ByteArray): ByteArray
+
+    /**
+     * A new, independent [DigestInstance] of the same algorithm that has seen everything this one
+     * has: updating or finishing either one leaves the other as it was.
+     */
+    public fun copy(): DigestInstance
 }

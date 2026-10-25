@@ -37,6 +37,7 @@ import platform.CoreCrypto.CCHmacInit
 import platform.CoreCrypto.CCHmacUpdate
 import platform.CoreCrypto.kCCHmacAlgSHA1
 import platform.CoreCrypto.kCCHmacAlgSHA256
+import platform.CoreCrypto.kCCHmacAlgSHA384
 import platform.CoreCrypto.kCCHmacAlgSHA512
 import platform.posix.memset
 import kotlin.experimental.ExperimentalNativeApi
@@ -129,6 +130,7 @@ public actual class MacInstance actual constructor(
         when (algorithm) {
             HmacAlgorithm.HMAC_SHA1 -> kCCHmacAlgSHA1
             HmacAlgorithm.HMAC_SHA256 -> kCCHmacAlgSHA256
+            HmacAlgorithm.HMAC_SHA384 -> kCCHmacAlgSHA384
             HmacAlgorithm.HMAC_SHA512 -> kCCHmacAlgSHA512
         }
 }
