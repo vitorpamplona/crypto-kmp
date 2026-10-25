@@ -36,6 +36,11 @@ import com.vitorpamplona.crypto.equalsConstantTime
  * A wrong key or nonce size throws [IllegalArgumentException]; so does [decrypt] when the
  * input is shorter than the tag or the tag does not verify, where [decryptOrNull] returns
  * null instead. No plaintext is produced before the tag verifies.
+ *
+ * On Android API 28+ this is the platform's ChaCha20-Poly1305 (BoringSSL), and on a JVM it is
+ * SunJCE's when HotSpot runs it with vector instructions (JDK 20+ on a CPU with them) or a
+ * bundled Conscrypt's; everywhere else, including Java 17, it is the Kotlin implementation
+ * here, which is faster than the JDK's pure-Java one. Both give the same bytes.
  */
 public object ChaCha20Poly1305 {
     private const val KEY_SIZE = 32
@@ -58,7 +63,17 @@ public object ChaCha20Poly1305 {
         key: ByteArray,
     ): ByteArray {
         requireKeyAndNonce(key, nonce)
+        platformChaCha20Poly1305?.let { return it.seal(plaintext, ad, nonce, key) }
+        return kotlinSeal(plaintext, ad, nonce, key)
+    }
 
+    /** The Kotlin seal, for sizes already checked: what every platform without JCA's runs. */
+    internal fun kotlinSeal(
+        plaintext: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray {
         // Step 1: Generate Poly1305 one-time key
         val polyKey = ChaCha20Core.chaCha20PolyKey(key, nonce)
 
@@ -116,6 +131,17 @@ public object ChaCha20Poly1305 {
         nonce: ByteArray,
         key: ByteArray,
     ): ByteArray? {
+        platformChaCha20Poly1305?.let { return it.open(ciphertextWithTag, ad, nonce, key) }
+        return kotlinOpen(ciphertextWithTag, ad, nonce, key)
+    }
+
+    /** The Kotlin open, for sizes already checked and an input at least a tag long. */
+    internal fun kotlinOpen(
+        ciphertextWithTag: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray? {
         val ctLen = ciphertextWithTag.size - TAG_SIZE
 
         // Step 1: Generate Poly1305 one-time key
@@ -167,3 +193,26 @@ public object ChaCha20Poly1305 {
         return poly.finish()
     }
 }
+
+/**
+ * A platform's ChaCha20-Poly1305, given sizes [ChaCha20Poly1305] has already checked and, for
+ * [open], an input at least a tag long. [open] returns null exactly when the tag fails.
+ */
+internal interface ChaCha20Poly1305Backend {
+    fun seal(
+        plaintext: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray
+
+    fun open(
+        ciphertextWithTag: ByteArray,
+        ad: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray?
+}
+
+/** JCA's ChaCha20-Poly1305 on the JVM and Android when it has one; null runs the Kotlin one. */
+internal expect val platformChaCha20Poly1305: ChaCha20Poly1305Backend?

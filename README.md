@@ -35,11 +35,18 @@ dependencies {
 | HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
 | AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | Kotlin, constant-time | Kotlin, constant-time | Kotlin, constant-time |
 | AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time | Kotlin, constant-time |
-| ChaCha20, Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
+| ChaCha20, Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
+| ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | JCA where it is native or vectorised, else Kotlin | Kotlin | Kotlin | Kotlin |
 | X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin | Kotlin |
 | Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` | `crypto.getRandomValues` |
 
 Packages are under `com.vitorpamplona.crypto`.
+
+On the JVM and Android, ChaCha20-Poly1305 (and XChaCha20-Poly1305, which runs on it) calls JCA
+only where JCA is faster: Android's BoringSSL on API 28+, a bundled Conscrypt, or SunJCE when
+HotSpot compiles both ChaCha20 and Poly1305 to vector instructions (JDK 20+ on a CPU with them).
+Java 17's SunJCE is pure Java and slower than the Kotlin code, so there the Kotlin code runs.
+The provider is picked by name and checked against the Kotlin output once, at first use.
 
 On the web everything but the random numbers is Kotlin: Web Crypto's digests and ciphers are
 async-only (they return a `Promise`), so they can't sit behind this synchronous API. Kotlin/JS has
