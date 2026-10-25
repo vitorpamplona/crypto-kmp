@@ -43,7 +43,10 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   Multiply by a constant with few set bits (4, 5, 19) with shifts and adds (`times5`,
   `times19`), which cost far less than `mul64` on JS.
 - **Prefer the platform's implementation** where it is fast and present (JCA, CommonCrypto), and
-  keep a pure-Kotlin one for the targets without it. Every primitive gets known-answer vectors in
+  keep a pure-Kotlin one for the targets without it. "Fast" is measured, not assumed: Java 17's
+  SunJCE ChaCha20-Poly1305 is slower than the Kotlin one, so `JcaChaCha20Poly1305` takes a named
+  provider only when it wins (BoringSSL, or SunJCE with HotSpot's intrinsics) and checks its
+  output against Kotlin's first. Every primitive gets known-answer vectors in
   `commonTest`, so each platform is held to the same bytes, plus a JVM test against JCA where JCA
   has the algorithm.
 - `commonMain` and `commonTest` stay free of JVM-only APIs: the Linux, Apple and web targets

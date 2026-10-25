@@ -68,8 +68,12 @@ noble-style JavaScript, Wasm, or Web Crypto's async-only API.
 
 - **JVM, hashes, HMAC and AES-GCM: as fast as JCA**, because they are JCA (AES-NI, CLMUL and
   SHA intrinsics), and 2-22× faster than Bouncy Castle's table-based pure Java.
-- **JVM, ChaCha20-Poly1305: 2× faster than Bouncy Castle, but 1.8× (1 KiB) to 5× (16 KiB)
-  slower than JCA**, whose ChaCha20 and Poly1305 HotSpot compiles to vector instructions on x86.
+- **JVM, ChaCha20-Poly1305: now JCA's wherever JCA is faster.** In the run above the Kotlin
+  code was 2× faster than Bouncy Castle but 1.8× (1 KiB) to 5× (16 KiB) slower than JCA, whose
+  ChaCha20 and Poly1305 HotSpot compiles to vector instructions. With JCA, crypto-kmp measured
+  2.6 µs (1 KiB) and 11.9 µs (16 KiB), level with JCA. Without those intrinsics (Java 17, or a
+  CPU without them), SunJCE is pure Java and slower than the Kotlin code: 6.9 and 86 µs with
+  both turned off, against Kotlin's 3.9 and 60. So the library only takes SunJCE when both are on.
 - **JVM, Curve25519: 1.3× (X25519 public key) to 2.1× (Ed25519 sign) behind Bouncy Castle**, and well
   ahead of JCA's SunEC (4.9-7.8× on Ed25519).
 - **Kotlin/Wasm is the fast web target**: faster than noble on everything but SHA-256, HMAC
@@ -90,9 +94,9 @@ noble-style JavaScript, Wasm, or Web Crypto's async-only API.
    - Poly1305 (most of ChaCha20-Poly1305's 9-30×): 13- or 16-bit limbs whose products fit an
      `Int` and `Math.imul`, as poly1305-donna-16 and noble do.
    - SHA-512 (17×): rounds on (hi, lo) `Int` pairs, as noble does.
-2. **JVM ChaCha20-Poly1305: use JCA where present** (Java 11+, and `ChaCha20/Poly1305/NoPadding`
-   on Android API 28+), keeping the Kotlin one for older Android. That follows the library's "prefer the platform" rule and is
-   worth up to 5×; its errors would be mapped to `IllegalArgumentException` like AES-GCM's.
+2. ~~JVM ChaCha20-Poly1305: use JCA where it is faster.~~ Done: Android's BoringSSL (API 28+),
+   a bundled Conscrypt, or SunJCE with both HotSpot intrinsics on; the Kotlin code everywhere
+   else, including Java 17. Up to 5× at 16 KiB.
 3. **JVM Curve25519: close the 1.3-2.1× gap to Bouncy Castle.** Ed25519 signing is the widest:
    Bouncy Castle's fixed-base multiplication is a precomputed comb, ours a ref10-style
    table; profile before choosing.
