@@ -119,10 +119,21 @@ Every primitive has known-answer vectors in `commonTest`, run on every platform:
 FIPS 197, NIST SP 800-38A (CBC) and the GCM specification's test cases, RFC 2202, RFC 4231,
 RFC 5869, RFC 7748, RFC 8032, RFC 8439 (including the Poly1305 edge cases of Appendix A.3),
 RFC 9001 (`expandLabel`), draft-irtf-cfrg-xchacha, the RIPEMD-160 and Keccak reference vectors.
-The web targets run them in Node.js and in headless Chrome.
+On top of those, every platform runs Project Wycheproof's 2,674 vectors for AES-GCM, AES-CBC,
+ChaCha20-Poly1305, XChaCha20-Poly1305, X25519, Ed25519, HMAC and HKDF: the counter wraps, odd
+nonce sizes, modified tags, bad padding, low-order and non-canonical points and malleable
+signatures that spec vectors miss (`scripts/wycheproof/generate.py` regenerates them). The web
+targets run all of it in Node.js and in headless Chrome.
 Each primitive also has negative tests (tampered tags, bad padding, wrong sizes, low-order and
 non-canonical points), and JVM tests compare AES, ChaCha20-Poly1305, X25519, Ed25519, SHA and
 HMAC with JCA on random inputs.
+
+## Performance
+
+[BENCHMARKS.md](BENCHMARKS.md) compares crypto-kmp with JCA and Bouncy Castle on the JVM, and with
+noble, TweetNaCl and node:crypto on Node.js. In short: on the JVM it matches JCA where it wraps it
+and beats Bouncy Castle on everything but Curve25519; Kotlin/Wasm beats noble on most operations;
+Kotlin/JS is several times slower than noble, so prefer `wasmJs` on the web.
 
 ## Developer Setup
 
@@ -178,4 +189,6 @@ MIT, see [LICENSE](LICENSE). Ported code keeps its attribution in the source:
 - `GeneralDigest`, `RIPEMD160Digest`, `KeccakDigest` and `Digest` are ports of Bouncy Castle's,
   Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc., MIT.
 - Poly1305 follows Andrew Moon's poly1305-donna-32 (public domain / MIT).
+- The test vectors in `crypto/src/commonTest/.../wycheproof/` are Project Wycheproof's,
+  Copyright Google LLC, Apache License 2.0 (its `LICENSE` is next to them).
 - The Curve25519 field and point arithmetic follow TweetNaCl and ref10 (both public domain).

@@ -19,6 +19,11 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   targets with no platform library). `portableMain` is above `linuxMain` (`getrandom`), `jsMain`
   and `wasmJsMain` (`crypto.getRandomValues`); those three bring only their entropy source and
   `mul64`.
+- `benchmark/` — not published: kotlinx-benchmark against JCA and Bouncy Castle (JVM) and noble,
+  TweetNaCl and node:crypto (JS), plus Wasm; results and the improvement list in `BENCHMARKS.md`.
+  Its dependencies stay in that module; its tests check every library gives the same bytes.
+- `scripts/wycheproof/generate.py` — turns Wycheproof's JSON into `commonTest` data; never edit
+  the generated `Wycheproof*.kt` by hand.
 
 ## Rules
 
