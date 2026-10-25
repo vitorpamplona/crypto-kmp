@@ -34,8 +34,8 @@ internal fun requireAesKey(key: ByteArray) =
 
 /**
  * Constant-time AES (FIPS 197) where this library has no platform AES to call: GCM on
- * every native target (CommonCrypto has no public GCM) and CBC on Linux. JVM and Android
- * use JCA for both, and Apple uses CommonCrypto for CBC.
+ * every target but the JVM and Android (CommonCrypto has no public GCM) and CBC on Linux and
+ * the web. JVM and Android use JCA for both, and Apple uses CommonCrypto for CBC.
  *
  * The state is bitsliced: eight 64-bit words hold bit i of every byte of four blocks,
  * and SubBytes is the Boyar-Peralta boolean circuit, so no table is ever indexed by

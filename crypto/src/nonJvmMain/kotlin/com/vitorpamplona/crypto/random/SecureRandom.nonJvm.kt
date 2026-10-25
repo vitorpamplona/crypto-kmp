@@ -21,8 +21,8 @@
 package com.vitorpamplona.crypto.random
 
 /**
- * The native [SecureRandom]: every draw is built from [fillSecureRandom], the platform's
- * entropy source, so Apple and Linux share one implementation of the rest.
+ * [SecureRandom] off the JVM: every draw is built from [fillSecureRandom], the platform's
+ * entropy source, so Apple, Linux and the web share one implementation of the rest.
  */
 public actual class SecureRandom actual constructor() {
     public actual fun nextInt(): Int {

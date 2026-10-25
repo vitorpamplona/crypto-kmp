@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.chacha
 
+import com.vitorpamplona.crypto.mul64
+
 /*
  * The limb layout, multiply and final reduction follow the 32-bit poly1305-donna
  * (poly1305-donna-32.h, https://github.com/floodyberry/poly1305-donna) by Andrew Moon,
@@ -98,10 +100,10 @@ internal class Poly1305State(
         r2 = (key.littleEndianToLong(6) ushr 4) and 0x3ffc0ff
         r3 = (key.littleEndianToLong(9) ushr 6) and 0x3f03fff
         r4 = (key.littleEndianToLong(12) ushr 8) and 0x00fffff
-        s1 = r1 * 5
-        s2 = r2 * 5
-        s3 = r3 * 5
-        s4 = r4 * 5
+        s1 = mul64(r1, 5)
+        s2 = mul64(r2, 5)
+        s3 = mul64(r3, 5)
+        s4 = mul64(r4, 5)
         pad0 = key.littleEndianToLong(16)
         pad1 = key.littleEndianToLong(20)
         pad2 = key.littleEndianToLong(24)
@@ -166,7 +168,7 @@ internal class Poly1305State(
         h4 += c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += c * 5
+        h0 += mul64(c, 5)
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c
@@ -239,11 +241,11 @@ internal class Poly1305State(
         h4 += (message.littleEndianToLong(offset + 12) ushr 8) or hibit
 
         // Multiply and reduce
-        val d0 = h0 * r0 + h1 * s4 + h2 * s3 + h3 * s2 + h4 * s1
-        val d1 = h0 * r1 + h1 * r0 + h2 * s4 + h3 * s3 + h4 * s2
-        val d2 = h0 * r2 + h1 * r1 + h2 * r0 + h3 * s4 + h4 * s3
-        val d3 = h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * s4
-        val d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0
+        val d0 = mul64(h0, r0) + mul64(h1, s4) + mul64(h2, s3) + mul64(h3, s2) + mul64(h4, s1)
+        val d1 = mul64(h0, r1) + mul64(h1, r0) + mul64(h2, s4) + mul64(h3, s3) + mul64(h4, s2)
+        val d2 = mul64(h0, r2) + mul64(h1, r1) + mul64(h2, r0) + mul64(h3, s4) + mul64(h4, s3)
+        val d3 = mul64(h0, r3) + mul64(h1, r2) + mul64(h2, r1) + mul64(h3, r0) + mul64(h4, s4)
+        val d4 = mul64(h0, r4) + mul64(h1, r3) + mul64(h2, r2) + mul64(h3, r1) + mul64(h4, r0)
 
         // Partial reduction mod 2^130 - 5
         var c: Long
@@ -261,7 +263,7 @@ internal class Poly1305State(
         h4 = d4 + c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += c * 5
+        h0 += mul64(c, 5)
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c

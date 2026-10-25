@@ -24,8 +24,9 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.nullOnDecryptFailure
 
 /**
- * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
- * Apple implementation that has one, CryptoKit, is Swift-only.
+ * AES-GCM in Kotlin on every target but the JVM and Android: CommonCrypto has no public GCM,
+ * the Apple implementation that has one, CryptoKit, is Swift-only, and Web Crypto's is
+ * async-only.
  */
 public actual class AESGCM actual constructor(
     public actual val keyBytes: ByteArray,

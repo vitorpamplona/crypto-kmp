@@ -23,7 +23,7 @@ package com.vitorpamplona.crypto.mac
 import com.vitorpamplona.crypto.sha2.ShaDigest
 
 /**
- * HMAC (RFC 2104) over a pure-Kotlin [ShaDigest], for the native [MacInstance].
+ * HMAC (RFC 2104) over a pure-Kotlin [ShaDigest], for the [MacInstance] on Linux and the web.
  * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.
  *
  * The digest states after the inner and the outer key block are computed once per

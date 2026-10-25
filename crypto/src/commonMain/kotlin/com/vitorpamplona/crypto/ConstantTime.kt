@@ -41,3 +41,17 @@ public fun ByteArray.equalsConstantTime(other: ByteArray): Boolean {
     }
     return diff == 0
 }
+
+/**
+ * `a * b`, the low 64 bits, in time independent of the values: every product of secrets
+ * (GHASH, Poly1305, the Curve25519 field and Ed25519's scalars) goes through here.
+ *
+ * Everywhere but Kotlin/JS this is the `*` operator, a single machine multiply. Kotlin/JS
+ * has no 64-bit integers and emulates [Long] with two 32-bit halves, and its multiply
+ * shortcuts zeros, negative values and operands under 2^24, so its time tells those cases
+ * apart. The JS actual multiplies the halves with 32-bit operations that take no branch.
+ */
+internal expect fun mul64(
+    a: Long,
+    b: Long,
+): Long

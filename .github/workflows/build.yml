@@ -48,6 +48,11 @@ jobs:
       - name: Check Linux native
         run: ./gradlew :crypto:linuxX64Test
 
+      # The Kotlin implementations again, on Kotlin/JS (which emulates 64-bit Long) and on
+      # Kotlin/Wasm, each in Node.js and in headless Chrome.
+      - name: Check JavaScript and Wasm
+        run: ./gradlew :crypto:jsTest :crypto:wasmJsTest
+
       # Apple code compiles on Linux as metadata, so a CommonCrypto mistake fails here in
       # minutes instead of in the macOS job.
       - name: Check Apple code compiles

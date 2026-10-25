@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.curve25519
 
+import com.vitorpamplona.crypto.mul64
+
 /*
  * The radix-2^25.5 representation, the multiply, square and carry chains and
  * the addition chains for inversion and the (p-5)/8 power follow ref10, the
@@ -200,25 +202,25 @@ internal object Curve25519Field {
         val f5x2 = f5 + f5
         val f7x2 = f7 + f7
         val f9x2 = f9 + f9
-        val g1x19 = 19 * g1
-        val g2x19 = 19 * g2
-        val g3x19 = 19 * g3
-        val g4x19 = 19 * g4
-        val g5x19 = 19 * g5
-        val g6x19 = 19 * g6
-        val g7x19 = 19 * g7
-        val g8x19 = 19 * g8
-        val g9x19 = 19 * g9
-        var h0 = f0 * g0 + f1x2 * g9x19 + f2 * g8x19 + f3x2 * g7x19 + f4 * g6x19 + f5x2 * g5x19 + f6 * g4x19 + f7x2 * g3x19 + f8 * g2x19 + f9x2 * g1x19
-        var h1 = f0 * g1 + f1 * g0 + f2 * g9x19 + f3 * g8x19 + f4 * g7x19 + f5 * g6x19 + f6 * g5x19 + f7 * g4x19 + f8 * g3x19 + f9 * g2x19
-        var h2 = f0 * g2 + f1x2 * g1 + f2 * g0 + f3x2 * g9x19 + f4 * g8x19 + f5x2 * g7x19 + f6 * g6x19 + f7x2 * g5x19 + f8 * g4x19 + f9x2 * g3x19
-        var h3 = f0 * g3 + f1 * g2 + f2 * g1 + f3 * g0 + f4 * g9x19 + f5 * g8x19 + f6 * g7x19 + f7 * g6x19 + f8 * g5x19 + f9 * g4x19
-        var h4 = f0 * g4 + f1x2 * g3 + f2 * g2 + f3x2 * g1 + f4 * g0 + f5x2 * g9x19 + f6 * g8x19 + f7x2 * g7x19 + f8 * g6x19 + f9x2 * g5x19
-        var h5 = f0 * g5 + f1 * g4 + f2 * g3 + f3 * g2 + f4 * g1 + f5 * g0 + f6 * g9x19 + f7 * g8x19 + f8 * g7x19 + f9 * g6x19
-        var h6 = f0 * g6 + f1x2 * g5 + f2 * g4 + f3x2 * g3 + f4 * g2 + f5x2 * g1 + f6 * g0 + f7x2 * g9x19 + f8 * g8x19 + f9x2 * g7x19
-        var h7 = f0 * g7 + f1 * g6 + f2 * g5 + f3 * g4 + f4 * g3 + f5 * g2 + f6 * g1 + f7 * g0 + f8 * g9x19 + f9 * g8x19
-        var h8 = f0 * g8 + f1x2 * g7 + f2 * g6 + f3x2 * g5 + f4 * g4 + f5x2 * g3 + f6 * g2 + f7x2 * g1 + f8 * g0 + f9x2 * g9x19
-        var h9 = f0 * g9 + f1 * g8 + f2 * g7 + f3 * g6 + f4 * g5 + f5 * g4 + f6 * g3 + f7 * g2 + f8 * g1 + f9 * g0
+        val g1x19 = mul64(19, g1)
+        val g2x19 = mul64(19, g2)
+        val g3x19 = mul64(19, g3)
+        val g4x19 = mul64(19, g4)
+        val g5x19 = mul64(19, g5)
+        val g6x19 = mul64(19, g6)
+        val g7x19 = mul64(19, g7)
+        val g8x19 = mul64(19, g8)
+        val g9x19 = mul64(19, g9)
+        var h0 = mul64(f0, g0) + mul64(f1x2, g9x19) + mul64(f2, g8x19) + mul64(f3x2, g7x19) + mul64(f4, g6x19) + mul64(f5x2, g5x19) + mul64(f6, g4x19) + mul64(f7x2, g3x19) + mul64(f8, g2x19) + mul64(f9x2, g1x19)
+        var h1 = mul64(f0, g1) + mul64(f1, g0) + mul64(f2, g9x19) + mul64(f3, g8x19) + mul64(f4, g7x19) + mul64(f5, g6x19) + mul64(f6, g5x19) + mul64(f7, g4x19) + mul64(f8, g3x19) + mul64(f9, g2x19)
+        var h2 = mul64(f0, g2) + mul64(f1x2, g1) + mul64(f2, g0) + mul64(f3x2, g9x19) + mul64(f4, g8x19) + mul64(f5x2, g7x19) + mul64(f6, g6x19) + mul64(f7x2, g5x19) + mul64(f8, g4x19) + mul64(f9x2, g3x19)
+        var h3 = mul64(f0, g3) + mul64(f1, g2) + mul64(f2, g1) + mul64(f3, g0) + mul64(f4, g9x19) + mul64(f5, g8x19) + mul64(f6, g7x19) + mul64(f7, g6x19) + mul64(f8, g5x19) + mul64(f9, g4x19)
+        var h4 = mul64(f0, g4) + mul64(f1x2, g3) + mul64(f2, g2) + mul64(f3x2, g1) + mul64(f4, g0) + mul64(f5x2, g9x19) + mul64(f6, g8x19) + mul64(f7x2, g7x19) + mul64(f8, g6x19) + mul64(f9x2, g5x19)
+        var h5 = mul64(f0, g5) + mul64(f1, g4) + mul64(f2, g3) + mul64(f3, g2) + mul64(f4, g1) + mul64(f5, g0) + mul64(f6, g9x19) + mul64(f7, g8x19) + mul64(f8, g7x19) + mul64(f9, g6x19)
+        var h6 = mul64(f0, g6) + mul64(f1x2, g5) + mul64(f2, g4) + mul64(f3x2, g3) + mul64(f4, g2) + mul64(f5x2, g1) + mul64(f6, g0) + mul64(f7x2, g9x19) + mul64(f8, g8x19) + mul64(f9x2, g7x19)
+        var h7 = mul64(f0, g7) + mul64(f1, g6) + mul64(f2, g5) + mul64(f3, g4) + mul64(f4, g3) + mul64(f5, g2) + mul64(f6, g1) + mul64(f7, g0) + mul64(f8, g9x19) + mul64(f9, g8x19)
+        var h8 = mul64(f0, g8) + mul64(f1x2, g7) + mul64(f2, g6) + mul64(f3x2, g5) + mul64(f4, g4) + mul64(f5x2, g3) + mul64(f6, g2) + mul64(f7x2, g1) + mul64(f8, g0) + mul64(f9x2, g9x19)
+        var h9 = mul64(f0, g9) + mul64(f1, g8) + mul64(f2, g7) + mul64(f3, g6) + mul64(f4, g5) + mul64(f5, g4) + mul64(f6, g3) + mul64(f7, g2) + mul64(f8, g1) + mul64(f9, g0)
         // ref10's carry ordering: independent carries are interleaved so the
         // limb-to-limb dependency chain does not stall the pipeline.
         var c = (h0 + (1L shl 25)) shr 26
@@ -252,7 +254,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += 19 * c
+        h0 += mul64(19, c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -308,29 +310,29 @@ internal object Curve25519Field {
         val f7x2 = f7 + f7
         val f8x2 = f8 + f8
         val f9x2 = f9 + f9
-        val f1x4 = 4 * f1
-        val f3x4 = 4 * f3
-        val f5x4 = 4 * f5
-        val f7x4 = 4 * f7
-        val f1x19 = 19 * f1
-        val f2x19 = 19 * f2
-        val f3x19 = 19 * f3
-        val f4x19 = 19 * f4
-        val f5x19 = 19 * f5
-        val f6x19 = 19 * f6
-        val f7x19 = 19 * f7
-        val f8x19 = 19 * f8
-        val f9x19 = 19 * f9
-        var h0 = f0 * f0 + f1x4 * f9x19 + f2x2 * f8x19 + f3x4 * f7x19 + f4x2 * f6x19 + f5x2 * f5x19
-        var h1 = f0x2 * f1 + f2x2 * f9x19 + f3x2 * f8x19 + f4x2 * f7x19 + f5x2 * f6x19
-        var h2 = f0x2 * f2 + f1x2 * f1 + f3x4 * f9x19 + f4x2 * f8x19 + f5x4 * f7x19 + f6 * f6x19
-        var h3 = f0x2 * f3 + f1x2 * f2 + f4x2 * f9x19 + f5x2 * f8x19 + f6x2 * f7x19
-        var h4 = f0x2 * f4 + f1x4 * f3 + f2 * f2 + f5x4 * f9x19 + f6x2 * f8x19 + f7x2 * f7x19
-        var h5 = f0x2 * f5 + f1x2 * f4 + f2x2 * f3 + f6x2 * f9x19 + f7x2 * f8x19
-        var h6 = f0x2 * f6 + f1x4 * f5 + f2x2 * f4 + f3x2 * f3 + f7x4 * f9x19 + f8 * f8x19
-        var h7 = f0x2 * f7 + f1x2 * f6 + f2x2 * f5 + f3x2 * f4 + f8x2 * f9x19
-        var h8 = f0x2 * f8 + f1x4 * f7 + f2x2 * f6 + f3x4 * f5 + f4 * f4 + f9x2 * f9x19
-        var h9 = f0x2 * f9 + f1x2 * f8 + f2x2 * f7 + f3x2 * f6 + f4x2 * f5
+        val f1x4 = mul64(4, f1)
+        val f3x4 = mul64(4, f3)
+        val f5x4 = mul64(4, f5)
+        val f7x4 = mul64(4, f7)
+        val f1x19 = mul64(19, f1)
+        val f2x19 = mul64(19, f2)
+        val f3x19 = mul64(19, f3)
+        val f4x19 = mul64(19, f4)
+        val f5x19 = mul64(19, f5)
+        val f6x19 = mul64(19, f6)
+        val f7x19 = mul64(19, f7)
+        val f8x19 = mul64(19, f8)
+        val f9x19 = mul64(19, f9)
+        var h0 = mul64(f0, f0) + mul64(f1x4, f9x19) + mul64(f2x2, f8x19) + mul64(f3x4, f7x19) + mul64(f4x2, f6x19) + mul64(f5x2, f5x19)
+        var h1 = mul64(f0x2, f1) + mul64(f2x2, f9x19) + mul64(f3x2, f8x19) + mul64(f4x2, f7x19) + mul64(f5x2, f6x19)
+        var h2 = mul64(f0x2, f2) + mul64(f1x2, f1) + mul64(f3x4, f9x19) + mul64(f4x2, f8x19) + mul64(f5x4, f7x19) + mul64(f6, f6x19)
+        var h3 = mul64(f0x2, f3) + mul64(f1x2, f2) + mul64(f4x2, f9x19) + mul64(f5x2, f8x19) + mul64(f6x2, f7x19)
+        var h4 = mul64(f0x2, f4) + mul64(f1x4, f3) + mul64(f2, f2) + mul64(f5x4, f9x19) + mul64(f6x2, f8x19) + mul64(f7x2, f7x19)
+        var h5 = mul64(f0x2, f5) + mul64(f1x2, f4) + mul64(f2x2, f3) + mul64(f6x2, f9x19) + mul64(f7x2, f8x19)
+        var h6 = mul64(f0x2, f6) + mul64(f1x4, f5) + mul64(f2x2, f4) + mul64(f3x2, f3) + mul64(f7x4, f9x19) + mul64(f8, f8x19)
+        var h7 = mul64(f0x2, f7) + mul64(f1x2, f6) + mul64(f2x2, f5) + mul64(f3x2, f4) + mul64(f8x2, f9x19)
+        var h8 = mul64(f0x2, f8) + mul64(f1x4, f7) + mul64(f2x2, f6) + mul64(f3x4, f5) + mul64(f4, f4) + mul64(f9x2, f9x19)
+        var h9 = mul64(f0x2, f9) + mul64(f1x2, f8) + mul64(f2x2, f7) + mul64(f3x2, f6) + mul64(f4x2, f5)
         // ref10's carry ordering: independent carries are interleaved so the
         // limb-to-limb dependency chain does not stall the pipeline.
         var c = (h0 + (1L shl 25)) shr 26
@@ -364,7 +366,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += 19 * c
+        h0 += mul64(19, c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -395,16 +397,16 @@ internal object Curve25519Field {
         o: LongArray,
         f: LongArray,
     ) {
-        var h0 = f[0] * 121665
-        var h1 = f[1] * 121665
-        var h2 = f[2] * 121665
-        var h3 = f[3] * 121665
-        var h4 = f[4] * 121665
-        var h5 = f[5] * 121665
-        var h6 = f[6] * 121665
-        var h7 = f[7] * 121665
-        var h8 = f[8] * 121665
-        var h9 = f[9] * 121665
+        var h0 = mul64(f[0], 121665)
+        var h1 = mul64(f[1], 121665)
+        var h2 = mul64(f[2], 121665)
+        var h3 = mul64(f[3], 121665)
+        var h4 = mul64(f[4], 121665)
+        var h5 = mul64(f[5], 121665)
+        var h6 = mul64(f[6], 121665)
+        var h7 = mul64(f[7], 121665)
+        var h8 = mul64(f[8], 121665)
+        var h9 = mul64(f[9], 121665)
         // ref10's carry ordering: independent carries are interleaved so the
         // limb-to-limb dependency chain does not stall the pipeline.
         var c = (h0 + (1L shl 25)) shr 26
@@ -438,7 +440,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += 19 * c
+        h0 += mul64(19, c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -486,11 +488,11 @@ internal object Curve25519Field {
      */
     fun pack25519(n: LongArray): ByteArray {
         val h = n.copyOf()
-        var q = (19 * h[9] + (1L shl 24)) shr 25
+        var q = (mul64(19, h[9]) + (1L shl 24)) shr 25
         for (i in 0 until LIMBS) {
             q = (h[i] + q) shr (if (i and 1 == 0) 26 else 25)
         }
-        h[0] += 19 * q
+        h[0] += mul64(19, q)
         var c = 0L
         for (i in 0 until LIMBS) {
             val width = if (i and 1 == 0) 26 else 25

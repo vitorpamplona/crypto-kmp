@@ -56,7 +56,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Check
-        run: ./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:compileAppleMainKotlinMetadata
+        run: ./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsTest :crypto:wasmJsTest :crypto:compileAppleMainKotlinMetadata
 
       - name: Build (gradle)
         run: ./gradlew assemble

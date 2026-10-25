@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.aes
 
+import com.vitorpamplona.crypto.mul64
+
 /*
  * Ported from BearSSL's ghash_ctmul64 (src/hash/ghash_ctmul64.c):
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>, released under the same MIT
@@ -144,10 +146,10 @@ private fun bmul64(
     val y1 = y and H2
     val y2 = y and H4
     val y3 = y and H8
-    val z0 = (x0 * y0) xor (x1 * y3) xor (x2 * y2) xor (x3 * y1)
-    val z1 = (x0 * y1) xor (x1 * y0) xor (x2 * y3) xor (x3 * y2)
-    val z2 = (x0 * y2) xor (x1 * y1) xor (x2 * y0) xor (x3 * y3)
-    val z3 = (x0 * y3) xor (x1 * y2) xor (x2 * y1) xor (x3 * y0)
+    val z0 = mul64(x0, y0) xor mul64(x1, y3) xor mul64(x2, y2) xor mul64(x3, y1)
+    val z1 = mul64(x0, y1) xor mul64(x1, y0) xor mul64(x2, y3) xor mul64(x3, y2)
+    val z2 = mul64(x0, y2) xor mul64(x1, y1) xor mul64(x2, y0) xor mul64(x3, y3)
+    val z3 = mul64(x0, y3) xor mul64(x1, y2) xor mul64(x2, y1) xor mul64(x3, y0)
     return (z0 and H1) or (z1 and H2) or (z2 and H4) or (z3 and H8)
 }
 
