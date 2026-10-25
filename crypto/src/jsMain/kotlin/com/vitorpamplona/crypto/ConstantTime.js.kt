@@ -23,7 +23,7 @@ package com.vitorpamplona.crypto
 /**
  * The low 64 bits of `a * b` from the 32-bit halves, with no branch on the values: an [Int]
  * multiply is `Math.imul`, and the emulated [Long] operations used here (`toInt`, constant
- * shifts, `or`, and `toLong` of non-negative values) run the same steps for every input.
+ * shifts, `or` and [toUnsignedLong]) run the same steps for every input.
  *
  * With a = aHi·2^32 + aLo and b likewise, the product mod 2^64 is aLo·bLo plus the low 32
  * bits of aHi·bLo + aLo·bHi in the top half. aLo·bLo is the one full 32x32 product, built
@@ -51,10 +51,5 @@ internal actual fun mul64(
     val lo = (mid shl 16) or (p00 and 0xFFFF)
     val hi = a1 * b1 + (mid ushr 16) + (p01 ushr 16) + (p10 ushr 16) + aHi * bLo + aLo * bHi
 
-    // Rebuilt from 16-bit pieces: Int.toLong() sets the top half by testing the sign, and
-    // a piece is never negative, so that test always comes out the same way.
-    return ((hi ushr 16).toLong() shl 48) or
-        ((hi and 0xFFFF).toLong() shl 32) or
-        ((lo ushr 16).toLong() shl 16) or
-        (lo and 0xFFFF).toLong()
+    return (hi.toUnsignedLong() shl 32) or lo.toUnsignedLong()
 }

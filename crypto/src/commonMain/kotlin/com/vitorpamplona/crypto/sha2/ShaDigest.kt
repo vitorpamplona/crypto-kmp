@@ -295,7 +295,7 @@ internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, length
             var word = 0L
             val i = offset + 8 * t
             for (j in 0 until 8) {
-                word = (word shl 8) or (block[i + j].toLong() and 0xff)
+                word = (word shl 8) or (block[i + j].toInt() and 0xff).toLong()
             }
             w[t] = word
         }

@@ -37,14 +37,14 @@ public actual class SecureRandom actual constructor() {
     public actual fun nextLong(): Long {
         val bytes = ByteArray(8)
         fillSecureRandom(bytes)
-        return ((bytes[0].toLong() and 0xFFL) shl 56) or
-            ((bytes[1].toLong() and 0xFFL) shl 48) or
-            ((bytes[2].toLong() and 0xFFL) shl 40) or
-            ((bytes[3].toLong() and 0xFFL) shl 32) or
-            ((bytes[4].toLong() and 0xFFL) shl 24) or
-            ((bytes[5].toLong() and 0xFFL) shl 16) or
-            ((bytes[6].toLong() and 0xFFL) shl 8) or
-            (bytes[7].toLong() and 0xFFL)
+        return ((bytes[0].toInt() and 0xFF).toLong() shl 56) or
+            ((bytes[1].toInt() and 0xFF).toLong() shl 48) or
+            ((bytes[2].toInt() and 0xFF).toLong() shl 40) or
+            ((bytes[3].toInt() and 0xFF).toLong() shl 32) or
+            ((bytes[4].toInt() and 0xFF).toLong() shl 24) or
+            ((bytes[5].toInt() and 0xFF).toLong() shl 16) or
+            ((bytes[6].toInt() and 0xFF).toLong() shl 8) or
+            (bytes[7].toInt() and 0xFF).toLong()
     }
 
     public actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { nextInt() }

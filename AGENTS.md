@@ -32,7 +32,10 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   key or data (see `AesBitsliced`, `Ghash`), and compare MACs and tags with `equalsConstantTime`.
   Multiply secret `Long`s with `mul64`, not `*`: Kotlin/JS emulates `Long`, and its `*` branches
   on the values (zero, sign, size). Its add, subtract, bitwise ops and constant shifts are
-  branch-free; `shr` by 32 or more tests the sign, so prefer `ushr` there.
+  branch-free; `shr` by 32 or more tests the sign, so prefer `ushr` there. Widening tests the
+  sign too: write `w.toUnsignedLong()` for a secret `Int` and `(b.toInt() and 0xFF).toLong()`
+  for a secret `Byte`, never `toLong() and mask`. Multiply by a small constant with shifts and
+  adds (`times19`), which cost far less than `mul64` on JS.
 - **Prefer the platform's implementation** where it is fast and present (JCA, CommonCrypto), and
   keep a pure-Kotlin one for the targets without it. Every primitive gets known-answer vectors in
   `commonTest`, so each platform is held to the same bytes, plus a JVM test against JCA where JCA

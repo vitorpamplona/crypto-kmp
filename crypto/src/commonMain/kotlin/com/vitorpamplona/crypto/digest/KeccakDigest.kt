@@ -308,7 +308,7 @@ public class KeccakDigest : Digest {
 
             for (j in 0..<(64 / 8)) {
                 stateAsWords[i] =
-                    stateAsWords[i] or ((state[index + j].toLong() and 0xffL) shl ((8 * j)))
+                    stateAsWords[i] or ((state[index + j].toInt() and 0xff).toLong() shl ((8 * j)))
             }
         }
     }

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.aes
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /*
  * Ported from BearSSL's aes_ct64 (src/symcipher/aes_ct64.c, aes_ct64_enc.c,
  * aes_ct64_dec.c): Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>, released
@@ -237,10 +239,10 @@ private fun interleaveIn(
     w: IntArray,
     offset: Int,
 ) {
-    var x0 = w[offset].toLong() and 0xFFFF_FFFFL
-    var x1 = w[offset + 1].toLong() and 0xFFFF_FFFFL
-    var x2 = w[offset + 2].toLong() and 0xFFFF_FFFFL
-    var x3 = w[offset + 3].toLong() and 0xFFFF_FFFFL
+    var x0 = w[offset].toUnsignedLong()
+    var x1 = w[offset + 1].toUnsignedLong()
+    var x2 = w[offset + 2].toUnsignedLong()
+    var x3 = w[offset + 3].toUnsignedLong()
     x0 = (x0 or (x0 shl 16)) and M0000FFFF
     x1 = (x1 or (x1 shl 16)) and M0000FFFF
     x2 = (x2 or (x2 shl 16)) and M0000FFFF
@@ -542,7 +544,7 @@ private fun subWord(
     q: LongArray,
 ): Int {
     q.fill(0)
-    q[0] = x.toLong() and 0xFFFF_FFFFL
+    q[0] = x.toUnsignedLong()
     ortho(q)
     sbox(q)
     ortho(q)

@@ -149,6 +149,13 @@ internal object Curve25519Field {
         for (i in 0 until LIMBS) o[i] = a[i] - b[i]
     }
 
+    /**
+     * 19 * [x] from shifts and adds: the same bits as the multiply, and on Kotlin/JS three
+     * branch-free operations instead of a full [mul64].
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun times19(x: Long): Long = (x shl 4) + (x shl 1) + x
+
     /** Field multiplication: o = a * b (mod p). */
     fun mul(
         a: LongArray,
@@ -202,15 +209,15 @@ internal object Curve25519Field {
         val f5x2 = f5 + f5
         val f7x2 = f7 + f7
         val f9x2 = f9 + f9
-        val g1x19 = mul64(19, g1)
-        val g2x19 = mul64(19, g2)
-        val g3x19 = mul64(19, g3)
-        val g4x19 = mul64(19, g4)
-        val g5x19 = mul64(19, g5)
-        val g6x19 = mul64(19, g6)
-        val g7x19 = mul64(19, g7)
-        val g8x19 = mul64(19, g8)
-        val g9x19 = mul64(19, g9)
+        val g1x19 = times19(g1)
+        val g2x19 = times19(g2)
+        val g3x19 = times19(g3)
+        val g4x19 = times19(g4)
+        val g5x19 = times19(g5)
+        val g6x19 = times19(g6)
+        val g7x19 = times19(g7)
+        val g8x19 = times19(g8)
+        val g9x19 = times19(g9)
         var h0 = mul64(f0, g0) + mul64(f1x2, g9x19) + mul64(f2, g8x19) + mul64(f3x2, g7x19) + mul64(f4, g6x19) + mul64(f5x2, g5x19) + mul64(f6, g4x19) + mul64(f7x2, g3x19) + mul64(f8, g2x19) + mul64(f9x2, g1x19)
         var h1 = mul64(f0, g1) + mul64(f1, g0) + mul64(f2, g9x19) + mul64(f3, g8x19) + mul64(f4, g7x19) + mul64(f5, g6x19) + mul64(f6, g5x19) + mul64(f7, g4x19) + mul64(f8, g3x19) + mul64(f9, g2x19)
         var h2 = mul64(f0, g2) + mul64(f1x2, g1) + mul64(f2, g0) + mul64(f3x2, g9x19) + mul64(f4, g8x19) + mul64(f5x2, g7x19) + mul64(f6, g6x19) + mul64(f7x2, g5x19) + mul64(f8, g4x19) + mul64(f9x2, g3x19)
@@ -254,7 +261,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += mul64(19, c)
+        h0 += times19(c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -310,19 +317,19 @@ internal object Curve25519Field {
         val f7x2 = f7 + f7
         val f8x2 = f8 + f8
         val f9x2 = f9 + f9
-        val f1x4 = mul64(4, f1)
-        val f3x4 = mul64(4, f3)
-        val f5x4 = mul64(4, f5)
-        val f7x4 = mul64(4, f7)
-        val f1x19 = mul64(19, f1)
-        val f2x19 = mul64(19, f2)
-        val f3x19 = mul64(19, f3)
-        val f4x19 = mul64(19, f4)
-        val f5x19 = mul64(19, f5)
-        val f6x19 = mul64(19, f6)
-        val f7x19 = mul64(19, f7)
-        val f8x19 = mul64(19, f8)
-        val f9x19 = mul64(19, f9)
+        val f1x4 = f1 shl 2
+        val f3x4 = f3 shl 2
+        val f5x4 = f5 shl 2
+        val f7x4 = f7 shl 2
+        val f1x19 = times19(f1)
+        val f2x19 = times19(f2)
+        val f3x19 = times19(f3)
+        val f4x19 = times19(f4)
+        val f5x19 = times19(f5)
+        val f6x19 = times19(f6)
+        val f7x19 = times19(f7)
+        val f8x19 = times19(f8)
+        val f9x19 = times19(f9)
         var h0 = mul64(f0, f0) + mul64(f1x4, f9x19) + mul64(f2x2, f8x19) + mul64(f3x4, f7x19) + mul64(f4x2, f6x19) + mul64(f5x2, f5x19)
         var h1 = mul64(f0x2, f1) + mul64(f2x2, f9x19) + mul64(f3x2, f8x19) + mul64(f4x2, f7x19) + mul64(f5x2, f6x19)
         var h2 = mul64(f0x2, f2) + mul64(f1x2, f1) + mul64(f3x4, f9x19) + mul64(f4x2, f8x19) + mul64(f5x4, f7x19) + mul64(f6, f6x19)
@@ -366,7 +373,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += mul64(19, c)
+        h0 += times19(c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -440,7 +447,7 @@ internal object Curve25519Field {
         h9 += c
         h8 -= c shl 26
         c = (h9 + (1L shl 24)) shr 25
-        h0 += mul64(19, c)
+        h0 += times19(c)
         h9 -= c shl 25
         c = (h0 + (1L shl 25)) shr 26
         h1 += c
@@ -488,11 +495,11 @@ internal object Curve25519Field {
      */
     fun pack25519(n: LongArray): ByteArray {
         val h = n.copyOf()
-        var q = (mul64(19, h[9]) + (1L shl 24)) shr 25
+        var q = (times19(h[9]) + (1L shl 24)) shr 25
         for (i in 0 until LIMBS) {
             q = (h[i] + q) shr (if (i and 1 == 0) 26 else 25)
         }
-        h[0] += mul64(19, q)
+        h[0] += times19(q)
         var c = 0L
         for (i in 0 until LIMBS) {
             val width = if (i and 1 == 0) 26 else 25
@@ -536,7 +543,7 @@ internal object Curve25519Field {
             var chunk = 0L
             for (k in 0 until 5) {
                 val idx = byteStart + k
-                if (idx < 32) chunk = chunk or ((n[idx].toLong() and 0xFF) shl (8 * k))
+                if (idx < 32) chunk = chunk or ((n[idx].toInt() and 0xFF).toLong() shl (8 * k))
             }
             o[i] = (chunk ushr shift) and ((1L shl width) - 1)
         }

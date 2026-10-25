@@ -106,10 +106,10 @@ public object Ed25519 {
 
         // Compute S = r + hram * a (mod L) in 64-byte arithmetic
         val x = LongArray(64)
-        for (i in 0 until 32) x[i] = r[i].toLong() and 0xFF
+        for (i in 0 until 32) x[i] = (r[i].toInt() and 0xFF).toLong()
         for (i in 0 until 32) {
             for (j in 0 until 32) {
-                x[i + j] += mul64(hram[i].toLong() and 0xFF, scalar[j].toLong() and 0xFF)
+                x[i + j] += ((hram[i].toInt() and 0xFF) * (scalar[j].toInt() and 0xFF)).toLong()
             }
         }
 
@@ -278,7 +278,7 @@ public object Ed25519 {
      */
     private fun reduce(input: ByteArray): ByteArray {
         val x = LongArray(64)
-        for (i in 0 until 64) x[i] = input[i].toLong() and 0xFF
+        for (i in 0 until 64) x[i] = (input[i].toInt() and 0xFF).toLong()
         return modL(x)
     }
 
@@ -326,7 +326,7 @@ public object Ed25519 {
      */
     private fun isCanonicalScalar(s: ByteArray): Boolean {
         for (i in 31 downTo 0) {
-            val si = s[i].toLong() and 0xFF
+            val si = (s[i].toInt() and 0xFF).toLong()
             if (si < L[i]) return true
             if (si > L[i]) return false
         }

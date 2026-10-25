@@ -26,7 +26,8 @@ package com.vitorpamplona.crypto.random
  * Web Crypto's `crypto.getRandomValues`, present in browsers, workers, Node.js 19+, Deno and
  * Bun. A Kotlin/Wasm [ByteArray] lives in Wasm memory, out of JavaScript's reach, so each
  * chunk of at most [MAX_GET_RANDOM_VALUES] bytes (the most one call accepts) is drawn into a
- * JavaScript `Int8Array`, copied over and wiped: the bytes may become a key.
+ * JavaScript `Int32Array`, copied over a word (one interop call) at a time and wiped: the
+ * bytes may become a key.
  */
 internal actual fun fillSecureRandom(output: ByteArray) {
     if (output.isEmpty()) return
@@ -34,8 +35,13 @@ internal actual fun fillSecureRandom(output: ByteArray) {
     var filled = 0
     while (filled < output.size) {
         val end = minOf(output.size, filled + MAX_GET_RANDOM_VALUES)
-        val chunk = randomInt8Array(end - filled)
-        for (i in filled until end) output[i] = byteAt(chunk, i - filled).toByte()
+        val chunk = randomInt32Array((end - filled + 3) / 4)
+        var word = 0
+        for (i in filled until end) {
+            if ((i - filled) and 3 == 0) word = intAt(chunk, (i - filled) shr 2)
+            output[i] = word.toByte()
+            word = word ushr 8
+        }
         wipe(chunk)
         filled = end
     }
@@ -45,9 +51,9 @@ private const val MAX_GET_RANDOM_VALUES = 65536
 
 private fun hasGetRandomValues(): Boolean = js("typeof globalThis.crypto?.getRandomValues === 'function'")
 
-private fun randomInt8Array(size: Int): JsAny = js("globalThis.crypto.getRandomValues(new Int8Array(size))")
+private fun randomInt32Array(size: Int): JsAny = js("globalThis.crypto.getRandomValues(new Int32Array(size))")
 
-private fun byteAt(
+private fun intAt(
     array: JsAny,
     index: Int,
 ): Int = js("array[index]")

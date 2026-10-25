@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.chacha
 
 import com.vitorpamplona.crypto.mul64
+import com.vitorpamplona.crypto.toUnsignedLong
 
 /*
  * The limb layout, multiply and final reduction follow the 32-bit poly1305-donna
@@ -100,10 +101,10 @@ internal class Poly1305State(
         r2 = (key.littleEndianToLong(6) ushr 4) and 0x3ffc0ff
         r3 = (key.littleEndianToLong(9) ushr 6) and 0x3f03fff
         r4 = (key.littleEndianToLong(12) ushr 8) and 0x00fffff
-        s1 = mul64(r1, 5)
-        s2 = mul64(r2, 5)
-        s3 = mul64(r3, 5)
-        s4 = mul64(r4, 5)
+        s1 = (r1 shl 2) + r1
+        s2 = (r2 shl 2) + r2
+        s3 = (r3 shl 2) + r3
+        s4 = (r4 shl 2) + r4
         pad0 = key.littleEndianToLong(16)
         pad1 = key.littleEndianToLong(20)
         pad2 = key.littleEndianToLong(24)
@@ -168,7 +169,7 @@ internal class Poly1305State(
         h4 += c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += mul64(c, 5)
+        h0 += (c shl 2) + c
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c
@@ -263,7 +264,7 @@ internal class Poly1305State(
         h4 = d4 + c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += mul64(c, 5)
+        h0 += (c shl 2) + c
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c
@@ -299,4 +300,4 @@ internal class Poly1305State(
 }
 
 /** Read 4 bytes as unsigned little-endian Long starting at [offset]. */
-private fun ByteArray.littleEndianToLong(offset: Int): Long = littleEndianToInt(offset).toLong() and 0xFFFFFFFFL
+private fun ByteArray.littleEndianToLong(offset: Int): Long = littleEndianToInt(offset).toUnsignedLong()

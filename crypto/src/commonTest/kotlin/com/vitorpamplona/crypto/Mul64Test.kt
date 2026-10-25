@@ -23,8 +23,9 @@ package com.vitorpamplona.crypto
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
-/** [mul64] is `*`: the JS actual rebuilds it from 32-bit pieces, and this holds it to that. */
+/** [mul64] is `*` and [toUnsignedLong] is a masked `toLong`: on JS both are rebuilt from pieces. */
 class Mul64Test {
     @Test
     fun knownProducts() {
@@ -44,19 +45,38 @@ class Mul64Test {
         val edges = longArrayOf(0, 1, -1, 2, 5, 19, 121665, 0xFFFF, 0x10000, 0xFFFFFF, 0x1000000, 0x3FFFFFF, Int.MAX_VALUE.toLong(), Int.MIN_VALUE.toLong(), 0xFFFFFFFFL, 0x100000000L, Long.MAX_VALUE, Long.MIN_VALUE)
         for (a in edges) {
             for (b in edges) {
-                assertEquals(a * b, mul64(a, b), "$a * $b")
-                assertEquals(-a * b, mul64(-a, b), "-$a * $b")
+                assertProduct(a, b)
+                assertProduct(-a, b)
             }
         }
         val random = Random(0x6d756c)
         repeat(10_000) {
             val a = random.nextLong()
             val b = random.nextLong()
-            assertEquals(a * b, mul64(a, b), "$a * $b")
+            assertProduct(a, b)
             // Limb-sized operands, as the field and Poly1305 multiply them.
-            val c = random.nextLong(-(1L shl 31), 1L shl 31)
-            val d = random.nextLong(-(1L shl 31), 1L shl 31)
-            assertEquals(c * d, mul64(c, d), "$c * $d")
+            assertProduct(random.nextLong(-(1L shl 31), 1L shl 31), random.nextLong(-(1L shl 31), 1L shl 31))
         }
+    }
+
+    @Test
+    fun toUnsignedLongZeroExtends() {
+        for (value in intArrayOf(0, 1, -1, 2, 0x7FFF_FFFF, Int.MIN_VALUE, 0x1234_5678, -0x1234_5678)) {
+            assertEquals(value.toLong() and 0xFFFF_FFFFL, value.toUnsignedLong(), "$value")
+        }
+        val random = Random(0x7a78)
+        repeat(1000) {
+            val value = random.nextInt()
+            if (value.toUnsignedLong() != (value.toLong() and 0xFFFF_FFFFL)) fail("toUnsignedLong($value)")
+        }
+    }
+
+    // The message only on failure: Long.toString is slow on Kotlin/JS, and this runs 10^4 times.
+    private fun assertProduct(
+        a: Long,
+        b: Long,
+    ) {
+        val product = mul64(a, b)
+        if (product != a * b) fail("mul64($a, $b) = $product, expected ${a * b}")
     }
 }

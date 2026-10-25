@@ -169,7 +169,7 @@ internal fun bigEndianLong(
 ): Long {
     var v = 0L
     for (i in 0 until 8) {
-        v = (v shl 8) or (b[o + i].toLong() and 0xFF)
+        v = (v shl 8) or (b[o + i].toInt() and 0xFF).toLong()
     }
     return v
 }
