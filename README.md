@@ -154,32 +154,6 @@ bumps the major version. Each release is tagged `v<version>` and listed on the
 [releases page](https://github.com/vitorpamplona/crypto-kmp/releases). The public API is recorded
 in `crypto/api/` and checked by `checkKotlinAbi`, so a change to it shows up in review.
 
-### Migrating from 1.x
-
-2.0 makes every platform behave the same and closes the gaps a review found. What callers see:
-
-- **Errors**: AES-GCM, AES-CBC, ChaCha20-Poly1305 and XChaCha20-Poly1305 throw
-  `IllegalArgumentException` on a bad tag or padding, on every platform. Code that caught
-  `AEADBadTagException`, `BadPaddingException` or `IllegalStateException` catches
-  `IllegalArgumentException`, or uses `decryptOrNull`. Wrong key, nonce and IV sizes throw where
-  they used to be truncated or fail later.
-- **AES**: a second `encrypt` on one `AESGCM` throws. `AESGCM.NAME` and `AESCBC.NAME` are now
-  `AES_GCM_NAME` and `AES_CBC_NAME`. `AESCBC.decrypt` of an empty array throws on the JVM too.
-  `AESGCM.decryptOrNull(bytes, aad)` is new.
-- **ChaCha**: `ChaCha20` is an `object` (`ChaCha20.encrypt(…)`). A block counter that would wrap
-  past 2^32 throws. Both AEADs gained `decryptOrNull`.
-- **Curve25519**: `Ed25519.verify` returns `false` (instead of throwing) for a wrong-length key,
-  and rejects small-order and non-canonical keys and `R`. `Ed25519.sign` and
-  `publicFromPrivate` derive the public key from the seed.
-- **Hashes and MACs**: `Hkdf(algorithm, hashLen)` is `Hkdf(algorithm)`, with `hashLen` derived.
-  `DigestInstance` and `MacInstance` accept the same names everywhere (RIPEMD-160 now works on
-  the JVM, SHA-512 and HMAC-SHA1 off it). `KeccakDigest()` is Keccak-256 (it was 288-bit), and
-  its internal state is private. `Memoable`, `ExtendedDigest` and `Pack` are gone.
-- **Random**: on the JVM and Android, `SecureRandom` wraps `java.security.SecureRandom` instead
-  of being it. `RandomInstance.randomizer` is private.
-- **Visibility**: `threadLocalDigest`, `FixedKey`, `DigestInstance.digest`, `MacInstance.mac` and
-  `Sha256Hasher.digest` are no longer public.
-
 ## License
 
 MIT, see [LICENSE](LICENSE). Ported code keeps its attribution in the source:
