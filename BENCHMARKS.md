@@ -64,6 +64,20 @@ noble-style JavaScript, Wasm, or Web Crypto's async-only API.
 | Ed25519 sign, 1 KiB | 17742 (30×) | 188 (0.3×) | 597 | 14969 (25×) | 40.0 (0.07×) |
 | Ed25519 verify, 1 KiB | 32802 (26×) | 192 (0.2×) | 1268 | 30764 (24×) | 112 (0.09×) |
 
+### Android
+
+`:benchmark-android` runs the same operations with Jetpack Microbenchmark against Android's own
+JCA (AndroidOpenSSL, which is BoringSSL in C) and Bouncy Castle. Microbenchmark wants a physical
+device, plugged in and unlocked, and refuses an emulator:
+
+```bash
+./gradlew :benchmark-android:connectedReleaseAndroidTest
+```
+
+The results land in `benchmark-android/build/outputs/connected_android_test_additional_output/`.
+CI runs it on emulators in dry-run mode only, to check every benchmark runs and that the
+libraries agree on the bytes; there are no Android numbers here yet.
+
 ## What the numbers say
 
 - **JVM, hashes, HMAC and AES-GCM: as fast as JCA**, because they are JCA (AES-NI, CLMUL and

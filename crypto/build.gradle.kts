@@ -46,6 +46,15 @@ kotlin {
         }
 
         withHostTest {}
+
+        // commonTest again, on a device or emulator: ART, and Android's own providers
+        // (AndroidOpenSSL, BoringSSL) behind JCA, which the host tests' desktop JVM doesn't have.
+        // In the "test" tree, so it compiles commonTest like the host tests do.
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
 
     iosArm64()
@@ -103,6 +112,15 @@ kotlin {
             dependsOn(jvmAndroidTest)
             dependencies {
                 implementation(libs.kotlin.test)
+            }
+        }
+
+        getByName("androidDeviceTest") {
+            dependsOn(jvmAndroidTest)
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.junit)
             }
         }
 
