@@ -29,8 +29,8 @@ public const val AES_CBC_NAME: String = "aes-cbc"
 /**
  * AES-CBC (NIST SP 800-38A) with PKCS#7 padding, under one key and one IV: the bytes of JCA's
  * "AES/CBC/PKCS5Padding". The block cipher is JCA on the JVM and Android, CommonCrypto on Apple
- * and a constant-time Kotlin AES on Linux; every platform pads, strips padding and checks
- * lengths with the same common code.
+ * and a constant-time Kotlin AES on Linux and the web; every platform pads, strips padding and
+ * checks lengths with the same common code.
  *
  * **CBC is unauthenticated.** Anyone can change a ciphertext and [decrypt] will return altered
  * plaintext without noticing. Pair it with a MAC over the IV and ciphertext (encrypt-then-MAC)

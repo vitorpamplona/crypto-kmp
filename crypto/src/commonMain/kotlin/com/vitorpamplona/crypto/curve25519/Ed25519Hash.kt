@@ -24,7 +24,7 @@ package com.vitorpamplona.crypto.curve25519
  * SHA-512 of the concatenation of [parts], for Ed25519's hashes.
  *
  * Taking the parts separately spares concatenating the message into a fresh
- * array for every hash. JVM and Android use JCA's SHA-512, the native targets
+ * array for every hash. JVM and Android use JCA's SHA-512, every other target
  * the pure-Kotlin one.
  */
 internal expect fun ed25519Sha512(vararg parts: ByteArray): ByteArray

@@ -35,7 +35,7 @@ internal enum class HmacAlgorithm(
     HMAC_SHA512("HmacSHA512", 64),
     ;
 
-    /** A fresh pure-Kotlin digest for the [Hmac] the native targets run. */
+    /** A fresh pure-Kotlin digest for the [Hmac] that Linux and the web run. */
     fun newDigest(): ShaDigest =
         when (this) {
             HMAC_SHA1 -> Sha1Digest()

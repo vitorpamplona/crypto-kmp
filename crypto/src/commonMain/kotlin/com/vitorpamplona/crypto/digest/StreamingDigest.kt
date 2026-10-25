@@ -54,7 +54,7 @@ internal interface StreamingDigest {
     fun digest(): ByteArray
 }
 
-/** The pure-Kotlin digests: all of them on Linux, and whatever the platform lacks elsewhere. */
+/** The pure-Kotlin digests: all of them on Linux and the web, and whatever the platform lacks elsewhere. */
 internal fun kotlinStreamingDigest(algorithm: DigestAlgorithm): StreamingDigest =
     when (algorithm) {
         DigestAlgorithm.SHA_1 -> ShaStreamingDigest(Sha1Digest())

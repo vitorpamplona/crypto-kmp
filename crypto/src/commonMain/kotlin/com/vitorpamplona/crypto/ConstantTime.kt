@@ -41,3 +41,28 @@ public fun ByteArray.equalsConstantTime(other: ByteArray): Boolean {
     }
     return diff == 0
 }
+
+/**
+ * `a * b`, the low 64 bits, in time independent of the values: every product of secrets
+ * (GHASH, Poly1305, the Curve25519 field and Ed25519's scalars) goes through here.
+ *
+ * Everywhere but Kotlin/JS this is the `*` operator, a single machine multiply. Kotlin/JS
+ * has no 64-bit integers and emulates [Long] with two 32-bit halves, and its multiply
+ * shortcuts zeros, negative values and operands under 2^24, so its time tells those cases
+ * apart. The JS actual multiplies the halves with 32-bit operations that take no branch.
+ */
+internal expect fun mul64(
+    a: Long,
+    b: Long,
+): Long
+
+/**
+ * This [Int] read as unsigned, as a [Long]: `toLong() and 0xFFFF_FFFFL` without the sign test.
+ * Kotlin/JS's `Int.toLong()` fills the top half with `value < 0 ? -1 : 0`, which branches on
+ * the value, so widening a secret has to start from a non-negative one, as both halves here
+ * are. Bytes have [Byte.toUnsignedLong], for the same reason: never `b.toLong() and 0xFF`.
+ */
+internal fun Int.toUnsignedLong(): Long = ((this ushr 1).toLong() shl 1) or (this and 1).toLong()
+
+/** This [Byte] read as unsigned, as a [Long], without the sign test: see [Int.toUnsignedLong]. */
+internal fun Byte.toUnsignedLong(): Long = (toInt() and 0xFF).toLong()

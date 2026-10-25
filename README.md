@@ -1,7 +1,7 @@
 # crypto-kmp
 
-Cryptographic primitives for Kotlin Multiplatform: JVM, Android, iOS, macOS and Linux. The
-library depends on nothing but the Kotlin stdlib. It uses the platform's implementation where
+Cryptographic primitives for Kotlin Multiplatform: JVM, Android, iOS, macOS, Linux, JavaScript
+and Wasm. The library depends on nothing but the Kotlin stdlib. It uses the platform's implementation where
 one is fast and available (JCA on the JVM and Android, CommonCrypto on Apple) and pure Kotlin
 everywhere else. The AES and GHASH cores are constant-time.
 
@@ -22,23 +22,32 @@ dependencies {
 | Android | minSdk 26 |
 | Apple | iosArm64, iosSimulatorArm64, macosArm64 |
 | Linux | linuxX64 |
+| Web | js and wasmJs, in browsers and Node.js: any runtime with Web Crypto's `crypto.getRandomValues` (Node.js 19+, Deno and Bun too) |
 
 ## What's inside
 
-| Primitive | Package | JVM / Android | Apple | Linux |
-|---|---|---|---|---|
-| SHA-256 one-shot (`sha256`, `sha256Into`) | `sha2` | JCA (pooled) | CommonCrypto | Kotlin |
-| `DigestInstance` (SHA-1, SHA-256, SHA-512, RIPEMD-160), streaming | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin |
-| RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin |
-| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin |
-| HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
-| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | Kotlin, constant-time | Kotlin, constant-time |
-| AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time |
-| ChaCha20, Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin |
-| X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin |
-| Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` |
+| Primitive | Package | JVM / Android | Apple | Linux | JS / Wasm |
+|---|---|---|---|---|---|
+| SHA-256 one-shot (`sha256`, `sha256Into`) | `sha2` | JCA (pooled) | CommonCrypto | Kotlin | Kotlin |
+| `DigestInstance` (SHA-1, SHA-256, SHA-512, RIPEMD-160), streaming | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin | Kotlin |
+| RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin | Kotlin |
+| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin | Kotlin |
+| HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
+| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | Kotlin, constant-time | Kotlin, constant-time | Kotlin, constant-time |
+| AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time | Kotlin, constant-time |
+| ChaCha20, Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
+| X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin | Kotlin |
+| Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` | `crypto.getRandomValues` |
 
 Packages are under `com.vitorpamplona.crypto`.
+
+On the web everything but the random numbers is Kotlin: Web Crypto's digests and ciphers are
+async-only (they return a `Promise`), so they can't sit behind this synchronous API. Kotlin/JS has
+no 64-bit integers and emulates `Long`, which makes the 64-bit arithmetic of SHA-512, GHASH,
+Poly1305 and Curve25519 slower there than anywhere else: an X25519 or Ed25519 operation takes tens
+of milliseconds in Node.js. Kotlin/Wasm runs 64-bit arithmetic natively, so prefer `wasmJs` where
+those are on a hot path. The emulated `Long` multiply also branches on its operands, so every
+product of secrets here goes through a branch-free multiply on Kotlin/JS instead.
 
 ## Usage
 
@@ -110,9 +119,21 @@ Every primitive has known-answer vectors in `commonTest`, run on every platform:
 FIPS 197, NIST SP 800-38A (CBC) and the GCM specification's test cases, RFC 2202, RFC 4231,
 RFC 5869, RFC 7748, RFC 8032, RFC 8439 (including the Poly1305 edge cases of Appendix A.3),
 RFC 9001 (`expandLabel`), draft-irtf-cfrg-xchacha, the RIPEMD-160 and Keccak reference vectors.
+On top of those, every platform runs Project Wycheproof's 2,674 vectors for AES-GCM, AES-CBC,
+ChaCha20-Poly1305, XChaCha20-Poly1305, X25519, Ed25519, HMAC and HKDF: the counter wraps, odd
+nonce sizes, modified tags, bad padding, low-order and non-canonical points and malleable
+signatures that spec vectors miss (`scripts/wycheproof/generate.py` regenerates them). The web
+targets run all of it in Node.js and in headless Chrome.
 Each primitive also has negative tests (tampered tags, bad padding, wrong sizes, low-order and
 non-canonical points), and JVM tests compare AES, ChaCha20-Poly1305, X25519, Ed25519, SHA and
 HMAC with JCA on random inputs.
+
+## Performance
+
+[BENCHMARKS.md](BENCHMARKS.md) compares crypto-kmp with JCA and Bouncy Castle on the JVM, and with
+noble, TweetNaCl and node:crypto on Node.js. In short: on the JVM it matches JCA where it wraps it
+and beats Bouncy Castle on everything but Curve25519; Kotlin/Wasm beats noble on most operations;
+Kotlin/JS is several times slower than noble, so prefer `wasmJs` on the web.
 
 ## Developer Setup
 
@@ -120,6 +141,7 @@ HMAC with JCA on random inputs.
 ./gradlew installGitHook            # pre-commit (spotless) and pre-push (tests) hooks
 ./gradlew spotlessApply
 ./gradlew :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test
+./gradlew :crypto:jsTest :crypto:wasmJsTest        # Node.js and headless Chrome (jsNodeTest, wasmJsNodeTest for Node only)
 ./gradlew :crypto:compileAppleMainKotlinMetadata   # Apple code, compiled on any host
 ./gradlew :crypto:checkKotlinAbi    # public API matches crypto/api; updateKotlinAbi to accept a change
 ./gradlew :crypto:iosSimulatorArm64Test :crypto:macosArm64Test   # macOS only
@@ -167,4 +189,6 @@ MIT, see [LICENSE](LICENSE). Ported code keeps its attribution in the source:
 - `GeneralDigest`, `RIPEMD160Digest`, `KeccakDigest` and `Digest` are ports of Bouncy Castle's,
   Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc., MIT.
 - Poly1305 follows Andrew Moon's poly1305-donna-32 (public domain / MIT).
+- The test vectors in `crypto/src/commonTest/.../wycheproof/` are Project Wycheproof's,
+  Copyright Google LLC, Apache License 2.0 (its `LICENSE` is next to them).
 - The Curve25519 field and point arithmetic follow TweetNaCl and ref10 (both public domain).

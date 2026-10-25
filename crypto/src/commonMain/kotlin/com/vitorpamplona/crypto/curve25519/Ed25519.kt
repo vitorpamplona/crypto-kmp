@@ -21,7 +21,9 @@
 package com.vitorpamplona.crypto.curve25519
 
 import com.vitorpamplona.crypto.equalsConstantTime
+import com.vitorpamplona.crypto.mul64
 import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.toUnsignedLong
 
 /*
  * The reduction mod L follows TweetNaCl by Daniel J. Bernstein, Bernard van
@@ -105,10 +107,10 @@ public object Ed25519 {
 
         // Compute S = r + hram * a (mod L) in 64-byte arithmetic
         val x = LongArray(64)
-        for (i in 0 until 32) x[i] = r[i].toLong() and 0xFF
+        for (i in 0 until 32) x[i] = r[i].toUnsignedLong()
         for (i in 0 until 32) {
             for (j in 0 until 32) {
-                x[i + j] += (hram[i].toLong() and 0xFF) * (scalar[j].toLong() and 0xFF)
+                x[i + j] += ((hram[i].toInt() and 0xFF) * (scalar[j].toInt() and 0xFF)).toLong()
             }
         }
 
@@ -277,7 +279,7 @@ public object Ed25519 {
      */
     private fun reduce(input: ByteArray): ByteArray {
         val x = LongArray(64)
-        for (i in 0 until 64) x[i] = input[i].toLong() and 0xFF
+        for (i in 0 until 64) x[i] = input[i].toUnsignedLong()
         return modL(x)
     }
 
@@ -291,7 +293,7 @@ public object Ed25519 {
             var j = i - 32
             val k = i - 12
             while (j < k) {
-                x[j] += carry - 16 * x[i] * L[j - (i - 32)]
+                x[j] += carry - mul64(x[i] shl 4, L[j - (i - 32)])
                 carry = (x[j] + 128) shr 8
                 x[j] -= carry shl 8
                 j++
@@ -302,12 +304,12 @@ public object Ed25519 {
 
         var carry: Long = 0
         for (j in 0 until 32) {
-            x[j] += carry - (x[31] shr 4) * L[j]
+            x[j] += carry - mul64(x[31] shr 4, L[j])
             carry = x[j] shr 8
             x[j] = x[j] and 0xFF
         }
         for (j in 0 until 32) {
-            x[j] -= carry * L[j]
+            x[j] -= mul64(carry, L[j])
         }
 
         val r = ByteArray(32)
@@ -325,7 +327,7 @@ public object Ed25519 {
      */
     private fun isCanonicalScalar(s: ByteArray): Boolean {
         for (i in 31 downTo 0) {
-            val si = s[i].toLong() and 0xFF
+            val si = s[i].toUnsignedLong()
             if (si < L[i]) return true
             if (si > L[i]) return false
         }
