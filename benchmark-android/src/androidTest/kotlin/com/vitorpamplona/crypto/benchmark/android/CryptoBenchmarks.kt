@@ -65,6 +65,10 @@ abstract class CryptoBenchmark(
 
     @Test fun x25519SharedSecret() = measure { x25519SharedSecret() }
 
+    @Test fun p256PublicKey() = measure { p256PublicKey() }
+
+    @Test fun p256SharedSecret() = measure { p256SharedSecret() }
+
     @Test fun ed25519Sign() = measure { ed25519Sign() }
 
     @Test fun ed25519Verify() = measure { ed25519Verify() }

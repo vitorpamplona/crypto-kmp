@@ -26,6 +26,7 @@ import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.chacha.XChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
+import com.vitorpamplona.crypto.ec.P256
 import com.vitorpamplona.crypto.hexToByteArray
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
@@ -90,6 +91,19 @@ class WycheproofTest {
     fun x25519() =
         run(X25519_VECTORS) { (public, private, shared) ->
             outcome(shared) { X25519.dh(private, public) }
+        }
+
+    /**
+     * P-256 ECDH with uncompressed points, as TLS sends them. The private key is a big-endian
+     * integer of any length here (a leading zero byte, or fewer bytes): normalized to 32.
+     * Compressed points, which this API doesn't take, are "acceptable" or "invalid" in the file,
+     * so rejecting them passes.
+     */
+    @Test
+    fun ecdhP256() =
+        run(ECDH_P256_VECTORS) { (public, private, shared) ->
+            val scalar = private.dropWhile { it == 0.toByte() }.toByteArray()
+            outcome(shared) { P256.dh(ByteArray(32 - scalar.size) + scalar, public) }
         }
 
     @Test

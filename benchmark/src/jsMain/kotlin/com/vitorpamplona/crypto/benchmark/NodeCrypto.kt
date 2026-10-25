@@ -33,6 +33,7 @@ import kotlinx.benchmark.State
 class NodeCrypto {
     private val nonces = NonceCounter()
     private var x25519: dynamic = null
+    private var p256: dynamic = null
     private var ed25519Private: dynamic = null
     private var ed25519Public: dynamic = null
     private var ed25519Signature: dynamic = null
@@ -43,6 +44,8 @@ class NodeCrypto {
         x25519 = js("({})")
         x25519.privateKey = rawKey("X25519", Inputs.x25519Private)
         x25519.publicKey = nodeCrypto.createPublicKey(jwk("X25519", Inputs.x25519Public, null))
+        p256 = nodeCrypto.createECDH("prime256v1")
+        p256.setPrivateKey(Inputs.p256Private)
         ed25519Private = rawKey("Ed25519", Inputs.ed25519Seed)
         ed25519Public = nodeCrypto.createPublicKey(ed25519Private)
         ed25519Signature = nodeCrypto.sign(null, Inputs.message1k, ed25519Private)
@@ -74,6 +77,16 @@ class NodeCrypto {
 
     @Benchmark
     fun x25519SharedSecret(): Any = nodeCrypto.diffieHellman(x25519)
+
+    @Benchmark
+    fun p256PublicKey(): Any {
+        val ecdh = nodeCrypto.createECDH("prime256v1")
+        ecdh.setPrivateKey(Inputs.p256Private)
+        return ecdh.getPublicKey()
+    }
+
+    @Benchmark
+    fun p256SharedSecret(): Any = p256.computeSecret(Inputs.p256Public)
 
     @Benchmark
     fun ed25519Sign(): Any = nodeCrypto.sign(null, Inputs.message1k, ed25519Private)

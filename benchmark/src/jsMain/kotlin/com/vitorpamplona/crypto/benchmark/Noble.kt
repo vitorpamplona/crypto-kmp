@@ -39,6 +39,8 @@ class Noble {
     private val x25519Private = uint8(Inputs.x25519Private)
     private val x25519Public = uint8(Inputs.x25519Public)
     private val ed25519Seed = uint8(Inputs.ed25519Seed)
+    private val p256Private = uint8(Inputs.p256Private)
+    private val p256Public = uint8(Inputs.p256Public)
     private var ed25519Public: dynamic = null
     private var ed25519Signature: dynamic = null
 
@@ -80,6 +82,13 @@ class Noble {
 
     @Benchmark
     fun x25519SharedSecret(): Any = NobleEd25519.x25519.getSharedSecret(x25519Private, x25519Public)
+
+    @Benchmark
+    fun p256PublicKey(): Any = NobleNist.p256.getPublicKey(p256Private, false)
+
+    // The shared point, encoded; its x-coordinate (bytes 1-32) is the TLS shared secret.
+    @Benchmark
+    fun p256SharedSecret(): Any = NobleNist.p256.getSharedSecret(p256Private, p256Public).subarray(1, 33)
 
     @Benchmark
     fun ed25519Sign(): Any = NobleEd25519.ed25519.sign(message1k, ed25519Seed)

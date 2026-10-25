@@ -85,6 +85,12 @@ external object NobleEd25519 {
     val x25519: dynamic
 }
 
+@JsModule("@noble/curves/nist.js")
+@JsNonModule
+external object NobleNist {
+    val p256: dynamic
+}
+
 @JsModule("tweetnacl")
 @JsNonModule
 external val nacl: dynamic

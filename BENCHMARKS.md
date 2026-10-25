@@ -78,6 +78,25 @@ The results land in `benchmark-android/build/outputs/connected_android_test_addi
 CI runs it on emulators in dry-run mode only, to check every benchmark runs and that the
 libraries agree on the bytes; there are no Android numbers here yet.
 
+### P-256 ECDH
+
+Measured separately, after the rest (same machine and settings), as P-256 arrived later: µs per
+operation for a shared secret and for a public key, against JCA (SunEC), Bouncy Castle 1.83 (its
+specialised `secp256r1`), noble 2.4 and node:crypto. Every library returns the same bytes.
+
+| | crypto-kmp | JCA | Bouncy Castle | noble | node:crypto |
+|---|---:|---:|---:|---:|---:|
+| JVM, shared secret | 664 | 1000 | 162 | — | — |
+| JVM, public key | 773 | — | 151 | — | — |
+| Kotlin/JS, shared secret | 72,679 | — | — | 2,833 | 75 |
+| Kotlin/JS, public key | 67,287 | — | — | 471 | 24 |
+| Kotlin/Wasm, shared secret | 1,478 | — | — | — | — |
+| Kotlin/Wasm, public key | 1,756 | — | — | — | — |
+
+So on the JVM crypto-kmp is ahead of SunEC, which is why it doesn't route P-256 to JCA, and about
+4× behind Bouncy Castle. Kotlin/JS is 26× behind noble, for the reason the other curves are:
+eight 32-bit limbs held in emulated `Long`s. Wasm is ahead of noble on the shared secret.
+
 ## What the numbers say
 
 - **JVM, hashes, HMAC and AES-GCM: as fast as JCA**, because they are JCA (AES-NI, CLMUL and
@@ -114,4 +133,8 @@ libraries agree on the bytes; there are no Android numbers here yet.
 3. **JVM Curve25519: close the 1.3-2.1× gap to Bouncy Castle.** Ed25519 signing is the widest:
    Bouncy Castle's fixed-base multiplication is a precomputed comb, ours a ref10-style
    table; profile before choosing.
-4. **Web guidance:** prefer `wasmJs` for anything on a hot path, which the README now says.
+4. **P-256:** squaring by symmetry (about a third fewer limb products), a precomputed table
+   for the fixed base G (public keys), and on Kotlin/JS a field over `Int` or `Double` limbs
+   rather than `Long`. On Android, measure BoringSSL's ECDH (AndroidOpenSSL) with
+   `:benchmark-android` before deciding whether to route to it, as ChaCha20-Poly1305 does.
+5. **Web guidance:** prefer `wasmJs` for anything on a hot path, which the README now says.

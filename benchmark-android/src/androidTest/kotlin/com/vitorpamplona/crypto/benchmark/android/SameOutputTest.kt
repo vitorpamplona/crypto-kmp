@@ -65,6 +65,8 @@ class SameOutputTest {
     fun curves() {
         same { x25519PublicKey() }
         same { x25519SharedSecret() }
+        same { p256PublicKey() }
+        same { p256SharedSecret() }
         same { ed25519Sign() }
         same { ed25519Verify() }
     }

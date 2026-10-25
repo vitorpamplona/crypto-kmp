@@ -24,18 +24,25 @@ import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.Scope
 import kotlinx.benchmark.Setup
 import kotlinx.benchmark.State
+import org.bouncycastle.crypto.agreement.ECDHBasicAgreement
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.digests.SHA512Digest
+import org.bouncycastle.crypto.ec.CustomNamedCurves
 import org.bouncycastle.crypto.engines.AESEngine
 import org.bouncycastle.crypto.generators.HKDFBytesGenerator
 import org.bouncycastle.crypto.macs.HMac
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.modes.GCMBlockCipher
 import org.bouncycastle.crypto.params.AEADParameters
+import org.bouncycastle.crypto.params.ECDomainParameters
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.params.ECPublicKeyParameters
 import org.bouncycastle.crypto.params.HKDFParameters
 import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.math.ec.rfc7748.X25519
 import org.bouncycastle.math.ec.rfc8032.Ed25519
+import org.bouncycastle.util.BigIntegers
+import java.math.BigInteger
 
 /**
  * Bouncy Castle's lightweight API: pure Java, like this library's Kotlin, and the usual
@@ -49,6 +56,11 @@ class BouncyCastle {
     private val chachaKey = KeyParameter(Inputs.chachaKey)
     private val ed25519Public = ByteArray(Ed25519.PUBLIC_KEY_SIZE)
     private lateinit var ed25519Signature: ByteArray
+
+    // Bouncy Castle's specialised secp256r1 field (CustomNamedCurves), its fastest P-256.
+    private val p256 = CustomNamedCurves.getByName("secp256r1").let { ECDomainParameters(it.curve, it.g, it.n, it.h) }
+    private val p256Private = ECPrivateKeyParameters(BigInteger(1, Inputs.p256Private), p256)
+    private val p256Public = ECPublicKeyParameters(p256.curve.decodePoint(Inputs.p256Public), p256)
 
     @Setup
     fun setup() {
@@ -105,6 +117,16 @@ class BouncyCastle {
         ByteArray(X25519.POINT_SIZE).also {
             X25519.calculateAgreement(Inputs.x25519Private, 0, Inputs.x25519Public, 0, it, 0)
         }
+
+    @Benchmark
+    fun p256PublicKey(): ByteArray =
+        p256.g
+            .multiply(p256Private.d)
+            .normalize()
+            .getEncoded(false)
+
+    @Benchmark
+    fun p256SharedSecret(): ByteArray = BigIntegers.asUnsignedByteArray(32, ECDHBasicAgreement().apply { init(p256Private) }.calculateAgreement(p256Public))
 
     @Benchmark
     fun ed25519Sign(): ByteArray =

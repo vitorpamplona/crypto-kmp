@@ -26,6 +26,7 @@ import com.vitorpamplona.crypto.chacha.XChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.crypto.digest.DigestInstance
+import com.vitorpamplona.crypto.ec.P256
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.crypto.sha2.sha256 as sha256Of
@@ -64,6 +65,10 @@ class CryptoKmpOperations : Operations {
     override fun x25519PublicKey() = X25519.publicFromPrivate(Inputs.x25519Private)
 
     override fun x25519SharedSecret() = X25519.dh(Inputs.x25519Private, Inputs.x25519Public)
+
+    override fun p256PublicKey() = P256.publicFromPrivate(Inputs.p256Private)
+
+    override fun p256SharedSecret() = P256.dh(Inputs.p256Private, Inputs.p256Public)
 
     override fun ed25519Sign() = Ed25519.sign(Inputs.message1k, ed25519.privateKey)
 

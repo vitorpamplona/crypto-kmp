@@ -48,6 +48,10 @@ interface Operations {
 
     fun x25519SharedSecret(): ByteArray?
 
+    fun p256PublicKey(): ByteArray?
+
+    fun p256SharedSecret(): ByteArray?
+
     fun ed25519Sign(): ByteArray?
 
     fun ed25519Verify(): Boolean?
@@ -67,6 +71,14 @@ object Inputs {
     // RFC 7748 §6.1's Alice and Bob.
     val x25519Private = hex("77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a")
     val x25519Public = hex("de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f")
+
+    // RFC 5903 §8.1: the initiator's private key and the responder's public key.
+    val p256Private = hex("c88f01f510d9ac3f70a292daa2316de544e9aab8afe84049c62a9c57862d1433")
+    val p256Public =
+        hex(
+            "04d12dfb5289c8d4f81208b70270398c342296970a0bccb74c736fc7554494bf63" +
+                "56fbf3ca366cc23e8157854c13c58d6aac23f046ada30f8353e74f33039872ab",
+        )
 
     // RFC 8032 §7.1, test 1, and its public key.
     val ed25519Seed = hex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")

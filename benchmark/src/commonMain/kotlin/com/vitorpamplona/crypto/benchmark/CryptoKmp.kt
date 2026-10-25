@@ -26,6 +26,7 @@ import com.vitorpamplona.crypto.chacha.XChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.crypto.digest.DigestInstance
+import com.vitorpamplona.crypto.ec.P256
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
 import kotlinx.benchmark.Benchmark
@@ -93,6 +94,12 @@ class CryptoKmp {
 
     @Benchmark
     fun x25519SharedSecret(): ByteArray = X25519.dh(Inputs.x25519Private, Inputs.x25519Public)
+
+    @Benchmark
+    fun p256PublicKey(): ByteArray = P256.publicFromPrivate(Inputs.p256Private)
+
+    @Benchmark
+    fun p256SharedSecret(): ByteArray = P256.dh(Inputs.p256Private, Inputs.p256Public)
 
     @Benchmark
     fun ed25519Sign(): ByteArray = Ed25519.sign(Inputs.message1k, ed25519Private)

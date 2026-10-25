@@ -55,6 +55,8 @@ class SameOutputJsTest {
     fun curves() {
         same(kmp().x25519PublicKey(), noble().x25519PublicKey(), nacl().x25519PublicKey())
         same(kmp().x25519SharedSecret(), noble().x25519SharedSecret(), nacl().x25519SharedSecret(), node().x25519SharedSecret())
+        same(kmp().p256PublicKey(), noble().p256PublicKey(), node().p256PublicKey())
+        same(kmp().p256SharedSecret(), noble().p256SharedSecret(), node().p256SharedSecret())
         same(kmp().ed25519Sign(), noble().ed25519Sign(), nacl().ed25519Sign(), node().ed25519Sign())
         assertTrue(kmp().ed25519Verify())
         assertTrue(noble().ed25519Verify())

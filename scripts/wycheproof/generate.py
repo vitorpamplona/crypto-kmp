@@ -27,6 +27,7 @@ SUITES = [
     ("CHACHA20_POLY1305", "chacha20_poly1305_test.json", ["key", "iv", "aad", "msg", "ct", "tag"]),
     ("XCHACHA20_POLY1305", "xchacha20_poly1305_test.json", ["key", "iv", "aad", "msg", "ct", "tag"]),
     ("X25519", "x25519_test.json", ["public", "private", "shared"]),
+    ("ECDH_P256", "ecdh_secp256r1_ecpoint_test.json", ["public", "private", "shared"]),
     ("ED25519", "ed25519_test.json", ["@pk", "msg", "sig"]),
     ("HMAC_SHA1", "hmac_sha1_test.json", ["@tagSize", "key", "msg", "tag"]),
     ("HMAC_SHA256", "hmac_sha256_test.json", ["@tagSize", "key", "msg", "tag"]),

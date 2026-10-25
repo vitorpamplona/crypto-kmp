@@ -20,12 +20,19 @@
  */
 package com.vitorpamplona.crypto.benchmark.android
 
+import java.math.BigInteger
+import java.security.AlgorithmParameters
 import java.security.GeneralSecurityException
 import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECParameterSpec
+import java.security.spec.ECPoint
+import java.security.spec.ECPrivateKeySpec
+import java.security.spec.ECPublicKeySpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
@@ -52,6 +59,14 @@ class AndroidJcaOperations : Operations {
     private val ed25519Private: PrivateKey? = orNull { KeyFactory.getInstance("Ed25519").generatePrivate(PKCS8EncodedKeySpec(der(ED25519_PKCS8, Inputs.ed25519Seed))) }
     private val ed25519Public: PublicKey? = orNull { KeyFactory.getInstance("Ed25519").generatePublic(X509EncodedKeySpec(der(ED25519_X509, Inputs.ed25519Public))) }
     private val ed25519Signature: ByteArray? = ed25519Sign()
+
+    // P-256 has been in Android's JCA all along: keys from the curve's named parameters.
+    private val p256 = AlgorithmParameters.getInstance("EC").apply { init(ECGenParameterSpec("secp256r1")) }.getParameterSpec(ECParameterSpec::class.java)
+    private val p256Private: PrivateKey = KeyFactory.getInstance("EC").generatePrivate(ECPrivateKeySpec(BigInteger(1, Inputs.p256Private), p256))
+    private val p256Public: PublicKey =
+        KeyFactory.getInstance("EC").generatePublic(
+            ECPublicKeySpec(ECPoint(BigInteger(1, Inputs.p256Public.copyOfRange(1, 33)), BigInteger(1, Inputs.p256Public.copyOfRange(33, 65))), p256),
+        )
 
     override fun sha256(): ByteArray = MessageDigest.getInstance("SHA-256").digest(Inputs.message1k)
 
@@ -87,6 +102,16 @@ class AndroidJcaOperations : Operations {
             generateSecret()
         }
     }
+
+    // JCA derives a public key only as part of generating a fresh pair.
+    override fun p256PublicKey(): ByteArray? = null
+
+    override fun p256SharedSecret(): ByteArray =
+        KeyAgreement.getInstance("ECDH").run {
+            init(p256Private)
+            doPhase(p256Public, true)
+            generateSecret()
+        }
 
     override fun ed25519Sign(): ByteArray? {
         val key = ed25519Private ?: return null

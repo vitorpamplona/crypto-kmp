@@ -38,6 +38,7 @@ dependencies {
 | ChaCha20, Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
 | ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | JCA where it is native or vectorised, else Kotlin | Kotlin | Kotlin | Kotlin |
 | X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin | Kotlin |
+| P-256 (secp256r1) ECDH (`P256`) | `ec` | Kotlin | Kotlin | Kotlin | Kotlin |
 | Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` | `crypto.getRandomValues` |
 
 Packages are under `com.vitorpamplona.crypto`.
@@ -63,6 +64,7 @@ import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
+import com.vitorpamplona.crypto.ec.P256
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -97,6 +99,11 @@ val shared = X25519.dh(alice.privateKey, bob.publicKey)
 val signer = Ed25519.generateKeyPair()
 val signature = Ed25519.sign(message, signer.privateKey)
 check(Ed25519.verify(message, signature, signer.publicKey))
+
+// P-256 ECDH with TLS 1.3's encodings: a 65-byte uncompressed public key, a 32-byte x-coordinate.
+val ours = P256.generateKeyPair()
+val theirs = P256.generateKeyPair()
+val p256Shared = P256.dh(ours.privateKey, theirs.publicKey) // throws on an invalid peer point
 ```
 
 Every platform accepts and rejects the same inputs, with the same exceptions:
@@ -131,6 +138,9 @@ ChaCha20-Poly1305, XChaCha20-Poly1305, X25519, Ed25519, HMAC and HKDF: the count
 nonce sizes, modified tags, bad padding, low-order and non-canonical points and malleable
 signatures that spec vectors miss (`scripts/wycheproof/generate.py` regenerates them). The web
 targets run all of it in Node.js and in headless Chrome.
+P-256 ECDH runs NIST CAVP's 25 KAS ECC CDH primitive vectors, RFC 5903 §8.1 and Wycheproof's
+355 `ecdh_secp256r1_ecpoint` vectors, every invalid-curve and badly encoded point among them
+rejected, and the JVM checks it against JCA's ECDH on random keys.
 Each primitive also has negative tests (tampered tags, bad padding, wrong sizes, low-order and
 non-canonical points), and JVM tests compare AES, ChaCha20-Poly1305, X25519, Ed25519, SHA and
 HMAC with JCA on random inputs.
@@ -174,3 +184,6 @@ MIT, see [LICENSE](LICENSE). Ported code keeps its attribution in the source:
 - The test vectors in `crypto/src/commonTest/.../wycheproof/` are Project Wycheproof's,
   Copyright Google LLC, Apache License 2.0 (its `LICENSE` is next to them).
 - The Curve25519 field and point arithmetic follow TweetNaCl and ref10 (both public domain).
+- P-256's point arithmetic follows the complete formulas of Renes, Costello and Batina,
+  "Complete addition formulas for prime order elliptic curves" (EUROCRYPT 2016), Algorithms 4
+  and 6. Its CDH test vectors are NIST CAVP's (a work of the US government).
