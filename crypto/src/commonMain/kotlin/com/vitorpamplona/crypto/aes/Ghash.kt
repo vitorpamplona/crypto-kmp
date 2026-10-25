@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.aes
 
 import com.vitorpamplona.crypto.mul64
+import com.vitorpamplona.crypto.toUnsignedLong
 
 /*
  * Ported from BearSSL's ghash_ctmul64 (src/hash/ghash_ctmul64.c):
@@ -169,7 +170,7 @@ internal fun bigEndianLong(
 ): Long {
     var v = 0L
     for (i in 0 until 8) {
-        v = (v shl 8) or (b[o + i].toInt() and 0xFF).toLong()
+        v = (v shl 8) or b[o + i].toUnsignedLong()
     }
     return v
 }

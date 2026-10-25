@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.random
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /**
  * [SecureRandom] off the JVM: every draw is built from [fillSecureRandom], the platform's
  * entropy source, so Apple, Linux and the web share one implementation of the rest.
@@ -37,14 +39,14 @@ public actual class SecureRandom actual constructor() {
     public actual fun nextLong(): Long {
         val bytes = ByteArray(8)
         fillSecureRandom(bytes)
-        return ((bytes[0].toInt() and 0xFF).toLong() shl 56) or
-            ((bytes[1].toInt() and 0xFF).toLong() shl 48) or
-            ((bytes[2].toInt() and 0xFF).toLong() shl 40) or
-            ((bytes[3].toInt() and 0xFF).toLong() shl 32) or
-            ((bytes[4].toInt() and 0xFF).toLong() shl 24) or
-            ((bytes[5].toInt() and 0xFF).toLong() shl 16) or
-            ((bytes[6].toInt() and 0xFF).toLong() shl 8) or
-            (bytes[7].toInt() and 0xFF).toLong()
+        return (bytes[0].toUnsignedLong() shl 56) or
+            (bytes[1].toUnsignedLong() shl 48) or
+            (bytes[2].toUnsignedLong() shl 40) or
+            (bytes[3].toUnsignedLong() shl 32) or
+            (bytes[4].toUnsignedLong() shl 24) or
+            (bytes[5].toUnsignedLong() shl 16) or
+            (bytes[6].toUnsignedLong() shl 8) or
+            bytes[7].toUnsignedLong()
     }
 
     public actual fun nextInt(bound: Int): Int = boundedNextInt(bound) { nextInt() }

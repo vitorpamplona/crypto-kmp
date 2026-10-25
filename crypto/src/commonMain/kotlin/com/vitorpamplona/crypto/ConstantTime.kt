@@ -60,6 +60,9 @@ internal expect fun mul64(
  * This [Int] read as unsigned, as a [Long]: `toLong() and 0xFFFF_FFFFL` without the sign test.
  * Kotlin/JS's `Int.toLong()` fills the top half with `value < 0 ? -1 : 0`, which branches on
  * the value, so widening a secret has to start from a non-negative one, as both halves here
- * are. Bytes take the same care: `(b.toInt() and 0xFF).toLong()`, not `b.toLong() and 0xFF`.
+ * are. Bytes have [Byte.toUnsignedLong], for the same reason: never `b.toLong() and 0xFF`.
  */
 internal fun Int.toUnsignedLong(): Long = ((this ushr 1).toLong() shl 1) or (this and 1).toLong()
+
+/** This [Byte] read as unsigned, as a [Long], without the sign test: see [Int.toUnsignedLong]. */
+internal fun Byte.toUnsignedLong(): Long = (toInt() and 0xFF).toLong()

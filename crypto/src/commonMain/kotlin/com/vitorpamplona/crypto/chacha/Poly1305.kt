@@ -101,10 +101,10 @@ internal class Poly1305State(
         r2 = (key.littleEndianToLong(6) ushr 4) and 0x3ffc0ff
         r3 = (key.littleEndianToLong(9) ushr 6) and 0x3f03fff
         r4 = (key.littleEndianToLong(12) ushr 8) and 0x00fffff
-        s1 = (r1 shl 2) + r1
-        s2 = (r2 shl 2) + r2
-        s3 = (r3 shl 2) + r3
-        s4 = (r4 shl 2) + r4
+        s1 = times5(r1)
+        s2 = times5(r2)
+        s3 = times5(r3)
+        s4 = times5(r4)
         pad0 = key.littleEndianToLong(16)
         pad1 = key.littleEndianToLong(20)
         pad2 = key.littleEndianToLong(24)
@@ -169,7 +169,7 @@ internal class Poly1305State(
         h4 += c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += (c shl 2) + c
+        h0 += times5(c)
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c
@@ -264,7 +264,7 @@ internal class Poly1305State(
         h4 = d4 + c
         c = h4 ushr 26
         h4 = h4 and 0x3ffffff
-        h0 += (c shl 2) + c
+        h0 += times5(c)
         c = h0 ushr 26
         h0 = h0 and 0x3ffffff
         h1 += c
@@ -298,6 +298,10 @@ internal class Poly1305State(
         const val FULL_BLOCK = 1L shl 24
     }
 }
+
+/** 5 * [x] as a shift and an add: the same bits as the multiply, without a [mul64] on Kotlin/JS. */
+@Suppress("NOTHING_TO_INLINE")
+private inline fun times5(x: Long): Long = (x shl 2) + x
 
 /** Read 4 bytes as unsigned little-endian Long starting at [offset]. */
 private fun ByteArray.littleEndianToLong(offset: Int): Long = littleEndianToInt(offset).toUnsignedLong()

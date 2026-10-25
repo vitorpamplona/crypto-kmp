@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.sha2
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /**
  * Pure-Kotlin incremental SHA-1 and SHA-2 (FIPS 180-4), for the targets without a
  * platform digest this library calls directly. JVM and Android use JCA instead.
@@ -295,7 +297,7 @@ internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, length
             var word = 0L
             val i = offset + 8 * t
             for (j in 0 until 8) {
-                word = (word shl 8) or (block[i + j].toInt() and 0xff).toLong()
+                word = (word shl 8) or block[i + j].toUnsignedLong()
             }
             w[t] = word
         }

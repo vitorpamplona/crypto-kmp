@@ -39,8 +39,9 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   on the values (zero, sign, size). Its add, subtract, bitwise ops and constant shifts are
   branch-free; `shr` by 32 or more tests the sign, so prefer `ushr` there. Widening tests the
   sign too: write `w.toUnsignedLong()` for a secret `Int` and `(b.toInt() and 0xFF).toLong()`
-  for a secret `Byte`, never `toLong() and mask`. Multiply by a small constant with shifts and
-  adds (`times19`), which cost far less than `mul64` on JS.
+  for a secret `Byte` (`b.toUnsignedLong()`), never `toLong() and mask`; a JVM test greps for it.
+  Multiply by a constant with few set bits (4, 5, 19) with shifts and adds (`times5`,
+  `times19`), which cost far less than `mul64` on JS.
 - **Prefer the platform's implementation** where it is fast and present (JCA, CommonCrypto), and
   keep a pure-Kotlin one for the targets without it. Every primitive gets known-answer vectors in
   `commonTest`, so each platform is held to the same bytes, plus a JVM test against JCA where JCA
@@ -53,7 +54,7 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 - Code ported from elsewhere keeps its attribution (the AES and GHASH cores are BearSSL's, MIT).
 - JVM target is 17: Quartz targets 17, and a dependency can't need a newer JVM than its user.
 - Before pushing: `./gradlew spotlessApply`, then
-  `./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsNodeTest :crypto:wasmJsNodeTest :crypto:compileAppleMainKotlinMetadata`
+  `./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsNodeTest :crypto:wasmJsNodeTest :crypto:compileAppleMainKotlinMetadata :benchmark:jvmTest :benchmark:jsNodeTest`
   (the pre-push hook runs these; `./gradlew installGitHook` installs it). CI also runs the JS and
   Wasm tests in headless Chrome (`:crypto:jsTest :crypto:wasmJsTest`).
 - The web targets use no DOM: `kotlin.js.stdlib.dom.api.included=false` keeps

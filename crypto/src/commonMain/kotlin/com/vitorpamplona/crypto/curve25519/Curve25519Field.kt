@@ -21,6 +21,7 @@
 package com.vitorpamplona.crypto.curve25519
 
 import com.vitorpamplona.crypto.mul64
+import com.vitorpamplona.crypto.toUnsignedLong
 
 /*
  * The radix-2^25.5 representation, the multiply, square and carry chains and
@@ -543,7 +544,7 @@ internal object Curve25519Field {
             var chunk = 0L
             for (k in 0 until 5) {
                 val idx = byteStart + k
-                if (idx < 32) chunk = chunk or ((n[idx].toInt() and 0xFF).toLong() shl (8 * k))
+                if (idx < 32) chunk = chunk or (n[idx].toUnsignedLong() shl (8 * k))
             }
             o[i] = (chunk ushr shift) and ((1L shl width) - 1)
         }

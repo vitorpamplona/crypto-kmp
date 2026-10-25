@@ -70,7 +70,7 @@ noble-style JavaScript, Wasm, or Web Crypto's async-only API.
   SHA intrinsics), and 2-22× faster than Bouncy Castle's table-based pure Java.
 - **JVM, ChaCha20-Poly1305: 2× faster than Bouncy Castle, but 1.8× (1 KiB) to 5× (16 KiB)
   slower than JCA**, whose ChaCha20 and Poly1305 HotSpot compiles to vector instructions on x86.
-- **JVM, Curve25519: 1.4× (X25519, verify) to 2.1× (sign) behind Bouncy Castle**, and well
+- **JVM, Curve25519: 1.3× (X25519 public key) to 2.1× (Ed25519 sign) behind Bouncy Castle**, and well
   ahead of JCA's SunEC (4.9-7.8× on Ed25519).
 - **Kotlin/Wasm is the fast web target**: faster than noble on everything but SHA-256, HMAC
   and 16 KiB AES-GCM (all within 1.5×), and 3-7× faster on the curves. The benchmark keeps the
@@ -93,7 +93,7 @@ noble-style JavaScript, Wasm, or Web Crypto's async-only API.
 2. **JVM ChaCha20-Poly1305: use JCA where present** (Java 11+, and `ChaCha20/Poly1305/NoPadding`
    on Android API 28+), keeping the Kotlin one for older Android. That follows the library's "prefer the platform" rule and is
    worth up to 5×; its errors would be mapped to `IllegalArgumentException` like AES-GCM's.
-3. **JVM Curve25519: close the 1.4-2× gap to Bouncy Castle.** Ed25519 signing is the widest:
+3. **JVM Curve25519: close the 1.3-2.1× gap to Bouncy Castle.** Ed25519 signing is the widest:
    Bouncy Castle's fixed-base multiplication is a precomputed comb, ours a ref10-style
    table; profile before choosing.
 4. **Web guidance:** prefer `wasmJs` for anything on a hot path, which the README now says.

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.digest
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /*
  * Ported from the Bouncy Castle Java library (org.bouncycastle.crypto.digests.KeccakDigest):
  * Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org),
@@ -308,7 +310,7 @@ public class KeccakDigest : Digest {
 
             for (j in 0..<(64 / 8)) {
                 stateAsWords[i] =
-                    stateAsWords[i] or ((state[index + j].toInt() and 0xff).toLong() shl ((8 * j)))
+                    stateAsWords[i] or (state[index + j].toUnsignedLong() shl ((8 * j)))
             }
         }
     }
