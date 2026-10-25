@@ -24,9 +24,9 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.nullOnDecryptFailure
 
 /**
- * AES-GCM in Kotlin on every target but the JVM and Android: CommonCrypto has no public GCM,
- * the Apple implementation that has one, CryptoKit, is Swift-only, and Web Crypto's is
- * async-only.
+ * AES-GCM off the JVM, on the platform's [gcmKey]: CommonCrypto's AES-CTR with the Kotlin
+ * GHASH on Apple (CommonCrypto has no public GCM, and CryptoKit's is Swift-only), the
+ * bitsliced Kotlin AES on Linux and the web (Web Crypto's GCM is async-only).
  */
 public actual class AESGCM actual constructor(
     public actual val keyBytes: ByteArray,
@@ -36,9 +36,9 @@ public actual class AESGCM actual constructor(
         requireGcmNonce(nonce)
     }
 
-    // Expanded here (which also checks the key size) and reused by every call on this
+    // Set up here (which also checks the key size) and reused by every call on this
     // instance; with the nonce copy, later changes to keyBytes or nonce don't reach it.
-    private val key = AesGcmKey(keyBytes)
+    private val key = gcmKey(keyBytes)
     private val fixedNonce = nonce.copyOf()
 
     private val guard = NonceGuard()
@@ -73,3 +73,6 @@ public actual class AESGCM actual constructor(
         val EMPTY = ByteArray(0)
     }
 }
+
+/** This platform's GCM for [key]; throws [IllegalArgumentException] unless it is 16, 24 or 32 bytes. */
+internal expect fun gcmKey(key: ByteArray): GcmKey

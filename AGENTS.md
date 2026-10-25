@@ -13,9 +13,10 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   (`MacInstance`, HMAC), `kdf` (`Hkdf`), `aes` (`AESGCM`, `AESCBC`), `chacha` (ChaCha20,
   Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305), `curve25519` (X25519, Ed25519), `random`
   (`RandomInstance`, `SecureRandom`), plus `SymmetricCipher` and `equalsConstantTime` at the root.
-- Source sets: `jvmAndroid` (JCA, shared by JVM and Android); `nonJvmMain` (the Kotlin AES-GCM,
-  SHA-512 for Ed25519 and `SecureRandom` every other target uses) above `appleMain` (CommonCrypto
-  where it has the algorithm) and `portableMain` (the Kotlin digests, HMAC and AES-CBC for the
+- Source sets: `jvmAndroid` (JCA, shared by JVM and Android); `nonJvmMain` (`AESGCM` over the
+  platform's `gcmKey`, SHA-512 for Ed25519 and `SecureRandom` every other target uses) above
+  `appleMain` (CommonCrypto where it has the algorithm, including AES-CTR under `CtrGcmKey` for
+  GCM) and `portableMain` (the Kotlin digests, HMAC, AES-CBC and bitsliced `AesGcmKey` for the
   targets with no platform library). `portableMain` is above `linuxMain` (`getrandom`), `jsMain`
   and `wasmJsMain` (`crypto.getRandomValues`); those three bring only their entropy source and
   `mul64`.
