@@ -115,6 +115,9 @@ class P256Test {
         val p = "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff"
         val x = g.copyOfRange(1, 33).toHexKey()
         val y = g.copyOfRange(33, 65).toHexKey()
+        // (0, y0) is on the curve: x = 0 is accepted as 32 zero bytes, and only as those.
+        val y0 = "66485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4"
+        P256.dh(key, ("04" + "00".repeat(32) + y0).hexToByteArray())
         val bad =
             listOf(
                 "",
@@ -127,10 +130,11 @@ class P256Test {
                 "06$x$y",
                 "04$x${y.dropLast(2)}",
                 "04$x${y}00",
-                // A coordinate at or above p: x = p, y = p, and x = p + Gx's low bits, which would
-                // reduce onto a curve point if it were reduced instead of rejected.
+                // A coordinate at or above p: x = p, y = p, and (0, y0) with x written as 0 + p,
+                // which would decode to that curve point if it were reduced instead of rejected.
                 "04$p$y",
                 "04$x$p",
+                "04$p$y0",
                 // (0, 0) and off-curve points.
                 "04" + "00".repeat(64),
                 "04$x" + y.dropLast(2) + "f4",
@@ -166,6 +170,18 @@ class P256Test {
         // n·G is the identity: G has order n.
         assertEquals(1, P256Field.isZero(P256Point.scalarMult(order, P256Point.generator()).z))
         assertFalse(samePoint(points[0], points[1]))
+    }
+
+    @Test
+    fun theGeneratorCombAgreesWithTheWindow() {
+        val random = Random(384)
+        val one = ByteArray(32).also { it[31] = 1 }
+        // Scalars with only the top tooth set, only the bottom one, and every bit set.
+        val edges = listOf(one, ByteArray(32).also { it[0] = 0x80.toByte() }, ByteArray(32) { -1 })
+        for (k in List(8) { randomScalar(random) } + edges) {
+            assertTrue(samePoint(P256Point.generatorMult(k), P256Point.scalarMult(k, P256Point.generator())), k.toHexKey())
+        }
+        assertEquals(1, P256Field.isZero(P256Point.generatorMult(order).z))
     }
 
     @Test

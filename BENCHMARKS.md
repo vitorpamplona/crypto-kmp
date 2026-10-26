@@ -86,16 +86,21 @@ specialised `secp256r1`), noble 2.4 and node:crypto. Every library returns the s
 
 | | crypto-kmp | JCA | Bouncy Castle | noble | node:crypto |
 |---|---:|---:|---:|---:|---:|
-| JVM, shared secret | 664 | 1000 | 162 | — | — |
-| JVM, public key | 773 | — | 151 | — | — |
-| Kotlin/JS, shared secret | 72,679 | — | — | 2,833 | 75 |
-| Kotlin/JS, public key | 67,287 | — | — | 471 | 24 |
-| Kotlin/Wasm, shared secret | 1,478 | — | — | — | — |
-| Kotlin/Wasm, public key | 1,756 | — | — | — | — |
+| JVM, shared secret | 470 | 1000 | 162 | — | — |
+| JVM, public key | 194 | — | 140 | — | — |
+| Kotlin/JS, shared secret | 70,967 | — | — | 2,866 | 74 |
+| Kotlin/JS, public key | 30,670 | — | — | 471 | 24 |
+| Kotlin/Wasm, shared secret | 621 | — | — | — | — |
+| Kotlin/Wasm, public key | 290 | — | — | — | — |
 
-So on the JVM crypto-kmp is ahead of SunEC, which is why it doesn't route P-256 to JCA, and about
-4× behind Bouncy Castle. Kotlin/JS is 26× behind noble, for the reason the other curves are:
-eight 32-bit limbs held in emulated `Long`s. Wasm is ahead of noble on the shared secret.
+The field multiply is straight-line over locals, with no scratch arrays (1.4× on the JVM and
+2.4× on Wasm over the loop it replaced), and public keys use a four-tooth comb over a table of
+16 multiples of G built on first use: 64 doublings instead of 256 (3.2× on the JVM, 6× on Wasm).
+So on the JVM crypto-kmp is ahead of SunEC, which is why it doesn't route P-256 to JCA, and
+within 1.4× of Bouncy Castle on public keys and 3× on shared secrets, where Bouncy Castle's
+Jacobian doubling costs fewer multiplies than the complete formulas. Kotlin/JS is 25× behind
+noble on the shared secret, for the reason the other curves are: eight 32-bit limbs held in
+emulated `Long`s. Wasm is ahead of noble on both.
 
 ## What the numbers say
 
@@ -133,8 +138,9 @@ eight 32-bit limbs held in emulated `Long`s. Wasm is ahead of noble on the share
 3. **JVM Curve25519: close the 1.3-2.1× gap to Bouncy Castle.** Ed25519 signing is the widest:
    Bouncy Castle's fixed-base multiplication is a precomputed comb, ours a ref10-style
    table; profile before choosing.
-4. **P-256:** squaring by symmetry (about a third fewer limb products), a precomputed table
-   for the fixed base G (public keys), and on Kotlin/JS a field over `Int` or `Double` limbs
-   rather than `Long`. On Android, measure BoringSSL's ECDH (AndroidOpenSSL) with
+4. **P-256:** Jacobian doubling for the shared secret (8 field multiplies to the complete
+   formula's 13; safe once the scalar is recoded so the running point is never the identity),
+   squaring by symmetry (about a third fewer limb products), and on Kotlin/JS a field over
+   `Int` or `Double` limbs rather than `Long`. On Android, measure BoringSSL's ECDH (AndroidOpenSSL) with
    `:benchmark-android` before deciding whether to route to it, as ChaCha20-Poly1305 does.
 5. **Web guidance:** prefer `wasmJs` for anything on a hot path, which the README now says.

@@ -33,13 +33,13 @@ import com.vitorpamplona.crypto.toUnsignedLong
  * branch-free too.
  *
  * Multiplication is Montgomery's, by coarsely integrated operand scanning (CIOS), with
- * R = 2^256: [mul] gives a·b·R^-1, with p's 0, 1 and 2^32-1 limbs folded into the reduction. So elements live in the Montgomery domain (a·R mod p)
- * between [toMontgomery] and [fromMontgomery]; addition and subtraction work the same in
- * both. Since p ≡ -1 mod 2^32, -p^-1 ≡ 1 mod 2^32 and the reduction factor of each round is
- * just the low limb.
+ * R = 2^256: [mul] gives a·b·R^-1, with p's 0, 1 and 2^32-1 limbs folded into the reduction.
+ * So elements live in the Montgomery domain (a·R mod p) between [toMontgomery] and
+ * [fromMontgomery]; addition and subtraction work the same in both. Since p ≡ -1 mod 2^32,
+ * -p^-1 ≡ 1 mod 2^32 and the reduction factor of each round is just the low limb.
  *
- * Scratch arrays hold values derived from secrets, so every function zeroes its own before it
- * returns.
+ * Nothing here allocates scratch: [mul] works in locals and [add], [sub] in the output, so no
+ * secret-derived temporary is left in an array to wipe; [invert] wipes its two copies.
  */
 internal object P256Field {
     const val LIMBS = 8
@@ -63,60 +63,489 @@ internal object P256Field {
 
     fun zero() = LongArray(LIMBS)
 
-    /** out = a·b·R^-1 mod p. [out] may be [a] or [b]. */
+    /**
+     * out = a·b·R^-1 mod p. [out] may be [a] or [b].
+     *
+     * Straight-line over locals, so it allocates nothing: CIOS unrolled, eight rounds of
+     * t += a·b[i] then t = (t + m·p) / 2^32 with m = t0. In each, t's limbs stay below 2^32
+     * plus a top limb of at most 1, and every sum fits an unsigned 64-bit Long: at most
+     * (2^32-1) + (2^32-1)^2 + (2^32-1) = 2^64 - 1 in the products, and in the reduction m·p
+     * needs no multiply, p's limbs being 2^32-1, 0 or 1. Its low three limbs are all ones, so
+     * adding m·(2^96-1) to a t whose low limb is m leaves limbs 1 and 2 as they were, shifted
+     * down, with a carry of m into limb 3. The eight rounds are one pattern written out, so
+     * t lives in locals rather than a scratch array; P256JcaTest checks them against
+     * BigInteger.
+     */
     fun mul(
         out: LongArray,
         a: LongArray,
         b: LongArray,
     ) {
-        val t = LongArray(LIMBS + 2)
-        for (i in 0 until LIMBS) {
-            // t += a·b[i]: each step is at most (2^32-1) + (2^32-1)^2 + (2^32-1) = 2^64 - 1.
-            val bi = b[i]
-            var c = 0L
-            for (j in 0 until LIMBS) {
-                val s = t[j] + mul64(a[j], bi) + c
-                t[j] = s and MASK
-                c = s ushr 32
-            }
-            var s = t[LIMBS] + c
-            t[LIMBS] = s and MASK
-            t[LIMBS + 1] = s ushr 32
+        val a0 = a[0]
+        val a1 = a[1]
+        val a2 = a[2]
+        val a3 = a[3]
+        val a4 = a[4]
+        val a5 = a[5]
+        val a6 = a[6]
+        val a7 = a[7]
+        var t0: Long
+        var t1: Long
+        var t2: Long
+        var t3: Long
+        var t4: Long
+        var t5: Long
+        var t6: Long
+        var t7: Long
+        var t8: Long
+        var t9: Long
+        var s: Long
+        var c: Long
+        var bi: Long
+        var m: Long
 
-            // t = (t + m·p) / 2^32 with m = t[0], which zeroes the low limb. p's limbs are
-            // 2^32-1, 0 or 1, so m·p[j] needs no multiply: m·(2^32-1) = m·2^32 - m, which
-            // fits 64 unsigned bits like the products above.
-            val m = t[0]
-            val mm = (m shl 32) - m
-            c = (t[0] + mm) ushr 32
-            s = t[1] + mm + c
-            t[0] = s and MASK
-            c = s ushr 32
-            s = t[2] + mm + c
-            t[1] = s and MASK
-            c = s ushr 32
-            s = t[3] + c
-            t[2] = s and MASK
-            c = s ushr 32
-            s = t[4] + c
-            t[3] = s and MASK
-            c = s ushr 32
-            s = t[5] + c
-            t[4] = s and MASK
-            c = s ushr 32
-            s = t[6] + m + c
-            t[5] = s and MASK
-            c = s ushr 32
-            s = t[7] + mm + c
-            t[6] = s and MASK
-            c = s ushr 32
-            s = t[LIMBS] + c
-            t[LIMBS - 1] = s and MASK
-            t[LIMBS] = t[LIMBS + 1] + (s ushr 32)
-        }
-        // t < 2p: one conditional subtraction makes it canonical.
-        reduceOnce(out, t, t[LIMBS])
-        t.fill(0)
+        // Round 0: t += a·b[0], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[0]
+        s = mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        t8 = c
+        t9 = 0L
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 1: t += a·b[1], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[1]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 2: t += a·b[2], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[2]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 3: t += a·b[3], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[3]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 4: t += a·b[4], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[4]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 5: t += a·b[5], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[5]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 6: t += a·b[6], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[6]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // Round 7: t += a·b[7], then t = (t + m·p) / 2^32 with m = t0.
+        bi = b[7]
+        s = t0 + mul64(a0, bi)
+        t0 = s and MASK
+        c = s ushr 32
+        s = t1 + mul64(a1, bi) + c
+        t1 = s and MASK
+        c = s ushr 32
+        s = t2 + mul64(a2, bi) + c
+        t2 = s and MASK
+        c = s ushr 32
+        s = t3 + mul64(a3, bi) + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t4 + mul64(a4, bi) + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t5 + mul64(a5, bi) + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t6 + mul64(a6, bi) + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t7 + mul64(a7, bi) + c
+        t7 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t8 = s and MASK
+        t9 = s ushr 32
+        m = t0
+        t0 = t1
+        t1 = t2
+        s = t3 + m
+        t2 = s and MASK
+        c = s ushr 32
+        s = t4 + c
+        t3 = s and MASK
+        c = s ushr 32
+        s = t5 + c
+        t4 = s and MASK
+        c = s ushr 32
+        s = t6 + m + c
+        t5 = s and MASK
+        c = s ushr 32
+        s = t7 + (m shl 32) - m + c
+        t6 = s and MASK
+        c = s ushr 32
+        s = t8 + c
+        t7 = s and MASK
+        t8 = t9 + (s ushr 32)
+
+        // t < 2p: subtract p once if t >= p, that is, if t - p doesn't borrow or t has bit 256.
+        var borrow = 0L
+        borrow = (t0 - MASK - borrow) ushr 63
+        borrow = (t1 - MASK - borrow) ushr 63
+        borrow = (t2 - MASK - borrow) ushr 63
+        borrow = (t3 - borrow) ushr 63
+        borrow = (t4 - borrow) ushr 63
+        borrow = (t5 - borrow) ushr 63
+        borrow = (t6 - 1L - borrow) ushr 63
+        borrow = (t7 - MASK - borrow) ushr 63
+        val keep = -((1L - borrow) or t8)
+        borrow = 0L
+        s = t0 - (keep and MASK) - borrow
+        out[0] = s and MASK
+        borrow = s ushr 63
+        s = t1 - (keep and MASK) - borrow
+        out[1] = s and MASK
+        borrow = s ushr 63
+        s = t2 - (keep and MASK) - borrow
+        out[2] = s and MASK
+        borrow = s ushr 63
+        s = t3 - borrow
+        out[3] = s and MASK
+        borrow = s ushr 63
+        s = t4 - borrow
+        out[4] = s and MASK
+        borrow = s ushr 63
+        s = t5 - borrow
+        out[5] = s and MASK
+        borrow = s ushr 63
+        s = t6 - (keep and 1L) - borrow
+        out[6] = s and MASK
+        borrow = s ushr 63
+        s = t7 - (keep and MASK) - borrow
+        out[7] = s and MASK
     }
 
     fun sqr(
@@ -130,15 +559,13 @@ internal object P256Field {
         a: LongArray,
         b: LongArray,
     ) {
-        val t = LongArray(LIMBS)
         var c = 0L
         for (i in 0 until LIMBS) {
             val s = a[i] + b[i] + c
-            t[i] = s and MASK
+            out[i] = s and MASK
             c = s ushr 32
         }
-        reduceOnce(out, t, c)
-        t.fill(0)
+        subtractPIfAtLeastP(out, c)
     }
 
     /** out = a - b mod p. [out] may be [a] or [b]. */
@@ -147,44 +574,41 @@ internal object P256Field {
         a: LongArray,
         b: LongArray,
     ) {
-        val t = LongArray(LIMBS)
         var borrow = 0L
         for (i in 0 until LIMBS) {
             val d = a[i] - b[i] - borrow
-            t[i] = d and MASK
+            out[i] = d and MASK
             borrow = d ushr 63
         }
         // Add p back exactly when it went below zero.
         val mask = -borrow
         var c = 0L
         for (i in 0 until LIMBS) {
-            val s = t[i] + (P[i] and mask) + c
+            val s = out[i] + (P[i] and mask) + c
             out[i] = s and MASK
             c = s ushr 32
         }
-        t.fill(0)
     }
 
     /**
-     * out = t - p if t (with [carry] as its bit 256) is at least p, else t: for a t below 2p.
-     * Both are computed; a mask picks one.
+     * t = t - p if t (with [carry] as its bit 256) is at least p, for a t below 2p. One pass
+     * finds whether t - p borrows; a second subtracts p under a mask, so no branch and no
+     * scratch array.
      */
-    private fun reduceOnce(
-        out: LongArray,
+    private fun subtractPIfAtLeastP(
         t: LongArray,
         carry: Long,
     ) {
-        val u = LongArray(LIMBS)
         var borrow = 0L
+        for (i in 0 until LIMBS) borrow = (t[i] - P[i] - borrow) ushr 63
+        // Subtract when t >= p: the subtraction didn't borrow, or t had a 257th bit.
+        val keep = -((1L - borrow) or carry)
+        borrow = 0L
         for (i in 0 until LIMBS) {
-            val d = t[i] - P[i] - borrow
-            u[i] = d and MASK
+            val d = t[i] - (P[i] and keep) - borrow
+            t[i] = d and MASK
             borrow = d ushr 63
         }
-        // Keep u when t >= p: the subtraction didn't borrow, or t had a 257th bit.
-        val keepU = -((1L - borrow) or carry)
-        for (i in 0 until LIMBS) out[i] = (u[i] and keepU) or (t[i] and keepU.inv())
-        u.fill(0)
     }
 
     fun toMontgomery(

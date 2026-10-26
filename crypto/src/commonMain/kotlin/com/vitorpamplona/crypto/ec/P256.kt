@@ -32,9 +32,10 @@ import com.vitorpamplona.crypto.random.RandomInstance
  * the 32-byte big-endian x-coordinate of the shared point.
  *
  * Every platform runs the same pure-Kotlin code: [P256Field]'s Montgomery arithmetic and
- * [P256Point]'s complete addition formulas, with a fixed-window scalar multiplication. None
- * of it branches on or indexes by the private scalar, but, being pure Kotlin, it carries no
- * hardware constant-time guarantee.
+ * [P256Point]'s complete addition formulas, with a fixed-window scalar multiplication for [dh]
+ * and a comb over a table built once for the generator for [publicFromPrivate]. None of it
+ * branches on or indexes by the private scalar, but, being pure Kotlin, it carries no hardware
+ * constant-time guarantee.
  *
  * Every failure throws [IllegalArgumentException]: a key of the wrong size, a private scalar
  * outside [1, n-1], and a peer point that is not uncompressed, has a coordinate at or above p,
@@ -76,7 +77,7 @@ public object P256 {
      */
     public fun publicFromPrivate(privateKey: ByteArray): ByteArray {
         requireScalar(privateKey)
-        val point = P256Point.scalarMult(privateKey, P256Point.generator())
+        val point = P256Point.generatorMult(privateKey)
         val out = ByteArray(PUBLIC_KEY_LENGTH)
         out[0] = 0x04
         toAffine(point, out, 1, withY = true)

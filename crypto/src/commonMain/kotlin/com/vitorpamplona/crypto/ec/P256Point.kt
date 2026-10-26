@@ -224,6 +224,52 @@ internal class P256Point(
             return q
         }
 
+        /**
+         * The comb table for [generatorMult]: entry d is the sum of 2^(64·t)·G over the bits t
+         * of d (0..3), so entry 0 is the identity and entry 15 is (1 + 2^64 + 2^128 + 2^192)·G.
+         * Public values, built once on first use and never written after.
+         */
+        private val GENERATOR_COMB: Array<P256Point> by lazy {
+            val teeth = Array(4) { generator() }
+            for (t in 1 until 4) {
+                teeth[t].copyFrom(teeth[t - 1])
+                repeat(64) { double(teeth[t], teeth[t]) }
+            }
+            val table = Array(16) { P256Point() }
+            for (d in 1 until 16) {
+                val top = 31 - d.countLeadingZeroBits()
+                add(table[d], table[d xor (1 shl top)], teeth[top])
+            }
+            table
+        }
+
+        /**
+         * [k]G for a 32-byte big-endian scalar, by a four-tooth comb over [GENERATOR_COMB]: k's
+         * bits i, i+64, i+128 and i+192 pick one entry for column i, so 64 doublings and 64
+         * additions replace [scalarMult]'s 256 and 64. The entry is read under masks, like
+         * [scalarMult]'s, and every scalar takes the same steps.
+         */
+        fun generatorMult(k: ByteArray): P256Point {
+            val table = GENERATOR_COMB
+            val q = P256Point()
+            val t = P256Point()
+            for (i in 63 downTo 0) {
+                double(q, q)
+                val digit = bit(k, i) or (bit(k, i + 64) shl 1) or (bit(k, i + 128) shl 2) or (bit(k, i + 192) shl 3)
+                t.copyFrom(table[0])
+                for (d in 1 until 16) t.cmov(table[d], equal(d, digit))
+                add(q, q, t)
+            }
+            t.wipe()
+            return q
+        }
+
+        /** Bit [i] (0 the least significant) of the 32-byte big-endian [k]: [i] is public. */
+        private fun bit(
+            k: ByteArray,
+            i: Int,
+        ): Int = (k[31 - i / 8].toInt() ushr (i % 8)) and 1
+
         /** 1 when a == b, else 0, for a and b in 0..15. No branch. */
         private fun equal(
             a: Int,
