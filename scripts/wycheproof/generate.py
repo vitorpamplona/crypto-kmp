@@ -31,9 +31,11 @@ SUITES = [
     ("ED25519", "ed25519_test.json", ["@pk", "msg", "sig"]),
     ("HMAC_SHA1", "hmac_sha1_test.json", ["@tagSize", "key", "msg", "tag"]),
     ("HMAC_SHA256", "hmac_sha256_test.json", ["@tagSize", "key", "msg", "tag"]),
+    ("HMAC_SHA384", "hmac_sha384_test.json", ["@tagSize", "key", "msg", "tag"]),
     ("HMAC_SHA512", "hmac_sha512_test.json", ["@tagSize", "key", "msg", "tag"]),
     ("HKDF_SHA1", "hkdf_sha1_test.json", ["ikm", "salt", "info", "size", "okm"]),
     ("HKDF_SHA256", "hkdf_sha256_test.json", ["ikm", "salt", "info", "size", "okm"]),
+    ("HKDF_SHA384", "hkdf_sha384_test.json", ["ikm", "salt", "info", "size", "okm"]),
     ("HKDF_SHA512", "hkdf_sha512_test.json", ["ikm", "salt", "info", "size", "okm"]),
 ]
 

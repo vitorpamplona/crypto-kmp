@@ -134,6 +134,35 @@ class CtrGcmKeyTest {
     }
 
     @Test
+    fun aFailedRestartClosesEachStreamOnce() {
+        // A platform that can't open the stream after the wrap: the one already open is freed
+        // once, not twice (a double CCCryptorRelease on Apple).
+        val key = random.nextBytes(16)
+        val closes = mutableListOf<Int>()
+        var opened = 0
+        val failing =
+            object : AesCtr {
+                private val inner = CarryingCtr(key)
+
+                override fun encryptBlock(block: ByteArray) = inner.encryptBlock(block)
+
+                override fun stream(iv: ByteArray): AesCtrStream {
+                    if (opened == 1) throw IllegalStateException("no stream")
+                    val id = opened++
+                    val stream = inner.stream(iv)
+                    return object : AesCtrStream by stream {
+                        override fun close() {
+                            closes += id
+                        }
+                    }
+                }
+            }
+        val j0 = ByteArray(16) { -1 }
+        assertFailsWith<IllegalStateException> { CtrGcmKey(failing).encryptFromJ0(j0, ByteArray(32), ByteArray(0)) }
+        assertEquals(listOf(0), closes)
+    }
+
+    @Test
     fun decryptChecksTheTagBeforeItDecrypts() {
         val key = random.nextBytes(32)
         val nonce = random.nextBytes(12)

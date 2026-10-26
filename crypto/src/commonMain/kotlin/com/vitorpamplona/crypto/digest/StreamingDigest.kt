@@ -22,6 +22,7 @@ package com.vitorpamplona.crypto.digest
 
 import com.vitorpamplona.crypto.sha2.Sha1Digest
 import com.vitorpamplona.crypto.sha2.Sha256Digest
+import com.vitorpamplona.crypto.sha2.Sha384Digest
 import com.vitorpamplona.crypto.sha2.Sha512Digest
 import com.vitorpamplona.crypto.sha2.ShaDigest
 
@@ -32,6 +33,7 @@ internal enum class DigestAlgorithm(
 ) {
     SHA_1("SHA-1", "SHA1"),
     SHA_256("SHA-256", "SHA256"),
+    SHA_384("SHA-384", "SHA384"),
     SHA_512("SHA-512", "SHA512"),
     RIPEMD_160("RIPEMD-160", "RIPEMD160"),
     ;
@@ -40,7 +42,7 @@ internal enum class DigestAlgorithm(
         /** Looks [name] up ignoring case, or throws [IllegalArgumentException]. */
         fun of(name: String): DigestAlgorithm =
             entries.firstOrNull { it.jcaName.equals(name, ignoreCase = true) || it.alias.equals(name, ignoreCase = true) }
-                ?: throw IllegalArgumentException("Unsupported digest algorithm: $name. Use SHA-1, SHA-256, SHA-512 or RIPEMD-160.")
+                ?: throw IllegalArgumentException("Unsupported digest algorithm: $name. Use SHA-1, SHA-256, SHA-384, SHA-512 or RIPEMD-160.")
     }
 }
 
@@ -52,6 +54,9 @@ internal interface StreamingDigest {
 
     /** Returns the digest and resets for the next message, like JCA's `MessageDigest.digest()`. */
     fun digest(): ByteArray
+
+    /** An independent digest that has seen what this one has. */
+    fun copy(): StreamingDigest
 }
 
 /** The pure-Kotlin digests: all of them on Linux and the web, and whatever the platform lacks elsewhere. */
@@ -59,6 +64,7 @@ internal fun kotlinStreamingDigest(algorithm: DigestAlgorithm): StreamingDigest 
     when (algorithm) {
         DigestAlgorithm.SHA_1 -> ShaStreamingDigest(Sha1Digest())
         DigestAlgorithm.SHA_256 -> ShaStreamingDigest(Sha256Digest())
+        DigestAlgorithm.SHA_384 -> ShaStreamingDigest(Sha384Digest())
         DigestAlgorithm.SHA_512 -> ShaStreamingDigest(Sha512Digest())
         DigestAlgorithm.RIPEMD_160 -> Ripemd160StreamingDigest()
     }
@@ -71,14 +77,18 @@ private class ShaStreamingDigest(
     override fun update(byte: Byte) = sha.update(byte)
 
     override fun digest(): ByteArray = sha.digest()
+
+    override fun copy(): StreamingDigest = ShaStreamingDigest(sha.newInstance().also { it.copyFrom(sha) })
 }
 
-private class Ripemd160StreamingDigest : StreamingDigest {
-    private val ripemd = RIPEMD160Digest()
-
+private class Ripemd160StreamingDigest(
+    private val ripemd: RIPEMD160Digest = RIPEMD160Digest(),
+) : StreamingDigest {
     override fun update(array: ByteArray) = ripemd.update(array, 0, array.size)
 
     override fun update(byte: Byte) = ripemd.update(byte)
 
     override fun digest(): ByteArray = ByteArray(ripemd.getDigestSize()).also { ripemd.doFinal(it, 0) }
+
+    override fun copy(): StreamingDigest = Ripemd160StreamingDigest(RIPEMD160Digest(ripemd))
 }

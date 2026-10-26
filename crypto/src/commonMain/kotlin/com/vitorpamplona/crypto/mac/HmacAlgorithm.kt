@@ -22,6 +22,7 @@ package com.vitorpamplona.crypto.mac
 
 import com.vitorpamplona.crypto.sha2.Sha1Digest
 import com.vitorpamplona.crypto.sha2.Sha256Digest
+import com.vitorpamplona.crypto.sha2.Sha384Digest
 import com.vitorpamplona.crypto.sha2.Sha512Digest
 import com.vitorpamplona.crypto.sha2.ShaDigest
 
@@ -32,6 +33,7 @@ internal enum class HmacAlgorithm(
 ) {
     HMAC_SHA1("HmacSHA1", 20),
     HMAC_SHA256("HmacSHA256", 32),
+    HMAC_SHA384("HmacSHA384", 48),
     HMAC_SHA512("HmacSHA512", 64),
     ;
 
@@ -40,6 +42,7 @@ internal enum class HmacAlgorithm(
         when (this) {
             HMAC_SHA1 -> Sha1Digest()
             HMAC_SHA256 -> Sha256Digest()
+            HMAC_SHA384 -> Sha384Digest()
             HMAC_SHA512 -> Sha512Digest()
         }
 
@@ -47,6 +50,6 @@ internal enum class HmacAlgorithm(
         /** Looks [name] up ignoring case, or throws [IllegalArgumentException]. */
         fun of(name: String): HmacAlgorithm =
             entries.firstOrNull { it.jcaName.equals(name, ignoreCase = true) }
-                ?: throw IllegalArgumentException("Unsupported MAC algorithm: $name. Use HmacSHA1, HmacSHA256 or HmacSHA512.")
+                ?: throw IllegalArgumentException("Unsupported MAC algorithm: $name. Use HmacSHA1, HmacSHA256, HmacSHA384 or HmacSHA512.")
     }
 }

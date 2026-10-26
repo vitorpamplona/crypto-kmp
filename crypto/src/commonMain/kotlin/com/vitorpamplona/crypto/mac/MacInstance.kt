@@ -21,8 +21,8 @@
 package com.vitorpamplona.crypto.mac
 
 /**
- * HMAC (RFC 2104) keyed with `key`. Supports exactly HmacSHA1, HmacSHA256 and HmacSHA512
- * on every platform, matching names ignoring case; any other name throws
+ * HMAC (RFC 2104) keyed with `key`. Supports exactly HmacSHA1, HmacSHA256, HmacSHA384 and
+ * HmacSHA512 on every platform, matching names ignoring case; any other name throws
  * [IllegalArgumentException]. Any key length works, including an empty key.
  *
  * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.

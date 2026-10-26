@@ -22,6 +22,7 @@ package com.vitorpamplona.crypto.kdf
 
 import com.vitorpamplona.crypto.hexToByteArray
 import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.crypto.sha2.sha384
 import com.vitorpamplona.crypto.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -105,10 +106,24 @@ class HkdfTest {
     fun hashLenFollowsTheAlgorithm() {
         assertEquals(32, Hkdf().hashLen)
         assertEquals(32, Hkdf("HmacSHA256").hashLen)
+        assertEquals(48, Hkdf("HmacSHA384").hashLen)
         assertEquals(64, Hkdf("HmacSHA512").hashLen)
         assertEquals(20, Hkdf("HmacSHA1").hashLen)
         assertFailsWith<IllegalArgumentException> { Hkdf("HmacMD5") }
         assertFailsWith<IllegalArgumentException> { Hkdf("SHA-256") }
+    }
+
+    @Test
+    fun tls13Sha384KeySchedule() {
+        // TLS_AES_256_GCM_SHA384's early secret and the first derived secret and traffic key and IV
+        // off it (RFC 8446 §7.1), checked against an HKDF written independently in Python.
+        val hkdf = Hkdf("HmacSHA384")
+        val early = hkdf.extract(ByteArray(48), ByteArray(48))
+        assertEquals("7ee8206f5570023e6dc7519eb1073bc4e791ad37b5c382aa10ba18e2357e716971f9362f2c2fe2a76bfd78dfec4ea9b5", early.toHexKey())
+        val derived = hkdf.expandLabel(early, "derived", sha384(ByteArray(0)), 48)
+        assertEquals("1591dac5cbbf0330a4a84de9c753330e92d01f0a88214b4464972fd668049e93e52f2b16fad922fdc0584478428f282b", derived.toHexKey())
+        assertEquals("6f9ba9cd492bbbdd7adc49c726f736b11b5fd46efc71b929f0aa2c19e98d4b84", hkdf.expandLabel(derived, "key", ByteArray(0), 32).toHexKey())
+        assertEquals("0159e8dce065587017ea5a82", hkdf.expandLabel(derived, "iv", ByteArray(0), 12).toHexKey())
     }
 
     @Test
