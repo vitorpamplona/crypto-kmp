@@ -141,9 +141,15 @@ internal class CtrGcmKey(
             var done = 0
             while (done < length) {
                 if (blocksLeft == 0L) {
-                    // inc32 wrapped: the same 96 bits, a counter of zero.
+                    // inc32 wrapped: the same 96 bits, a counter of zero. The new stream comes
+                    // first, so if making it fails the old one is still the one close() frees,
+                    // once. This branch is the one place timing follows J0: with a 12-byte nonce
+                    // J0 is public and no ByteArray reaches the wrap; with any other, J0 is a
+                    // GHASH of the nonce, and only a message crossing it (blocks / 2^32 odds)
+                    // takes it.
+                    val next = aes.stream(prefix.copyOf(16))
                     stream.close()
-                    stream = aes.stream(prefix.copyOf(16))
+                    stream = next
                     blocksLeft = 0x1_0000_0000L
                 }
                 val chunk = minOf((length - done).toLong(), blocksLeft * 16).toInt()
