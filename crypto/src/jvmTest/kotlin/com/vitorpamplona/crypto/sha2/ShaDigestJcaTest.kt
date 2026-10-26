@@ -39,7 +39,7 @@ class ShaDigestJcaTest {
 
     @Test
     fun digestsMatchJca() {
-        val pairs = listOf(Sha256Digest() to "SHA-256", Sha512Digest() to "SHA-512", Sha1Digest() to "SHA-1")
+        val pairs = listOf(Sha256Digest() to "SHA-256", Sha384Digest() to "SHA-384", Sha512Digest() to "SHA-512", Sha1Digest() to "SHA-1")
         for ((digest, name) in pairs) {
             val jca = MessageDigest.getInstance(name)
             for (length in 0..3 * digest.blockSize + 1) {
@@ -52,7 +52,7 @@ class ShaDigestJcaTest {
 
     @Test
     fun hmacsMatchJca() {
-        val pairs = listOf({ Sha256Digest() } to "HmacSHA256", { Sha512Digest() } to "HmacSHA512", { Sha1Digest() } to "HmacSHA1")
+        val pairs = listOf({ Sha256Digest() } to "HmacSHA256", { Sha384Digest() } to "HmacSHA384", { Sha512Digest() } to "HmacSHA512", { Sha1Digest() } to "HmacSHA1")
         for ((newDigest, name) in pairs) {
             val blockSize = newDigest().blockSize
             for (keyLength in listOf(1, 16, 32, blockSize - 1, blockSize, blockSize + 1, 3 * blockSize)) {

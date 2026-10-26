@@ -102,6 +102,7 @@ final class com.vitorpamplona.crypto.curve25519/X25519KeyPair { // com.vitorpamp
 final class com.vitorpamplona.crypto.digest/DigestInstance { // com.vitorpamplona.crypto.digest/DigestInstance|null[0]
     constructor <init>(kotlin/String) // com.vitorpamplona.crypto.digest/DigestInstance.<init>|<init>(kotlin.String){}[0]
 
+    final fun copy(): com.vitorpamplona.crypto.digest/DigestInstance // com.vitorpamplona.crypto.digest/DigestInstance.copy|copy(){}[0]
     final fun digest(): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(){}[0]
     final fun digest(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(kotlin.ByteArray){}[0]
     final fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/DigestInstance.update|update(kotlin.Byte){}[0]
@@ -245,3 +246,4 @@ final const val com.vitorpamplona.crypto.aes/AES_GCM_NAME // com.vitorpamplona.c
 final fun (kotlin/ByteArray).com.vitorpamplona.crypto/equalsConstantTime(kotlin/ByteArray): kotlin/Boolean // com.vitorpamplona.crypto/equalsConstantTime|equalsConstantTime@kotlin.ByteArray(kotlin.ByteArray){}[0]
 final fun com.vitorpamplona.crypto.sha2/sha256(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256|sha256(kotlin.ByteArray){}[0]
 final fun com.vitorpamplona.crypto.sha2/sha256Into(kotlin/ByteArray, kotlin/ByteArray, kotlin/Int = ...): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256Into|sha256Into(kotlin.ByteArray;kotlin.ByteArray;kotlin.Int){}[0]
+final fun com.vitorpamplona.crypto.sha2/sha384(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha384|sha384(kotlin.ByteArray){}[0]

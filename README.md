@@ -29,9 +29,10 @@ dependencies {
 | Primitive | Package | JVM / Android | Apple | Linux | JS / Wasm |
 |---|---|---|---|---|---|
 | SHA-256 one-shot (`sha256`, `sha256Into`) | `sha2` | JCA (pooled) | CommonCrypto | Kotlin | Kotlin |
-| `DigestInstance` (SHA-1, SHA-256, SHA-512, RIPEMD-160), streaming | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin | Kotlin |
+| SHA-384 one-shot (`sha384`) | `sha2` | on `DigestInstance` | on `DigestInstance` | on `DigestInstance` | on `DigestInstance` |
+| `DigestInstance` (SHA-1, SHA-256, SHA-384, SHA-512, RIPEMD-160), streaming, with `copy()` snapshots | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin | Kotlin |
 | RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin | Kotlin |
-| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin | Kotlin |
+| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA384 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin | Kotlin |
 | HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
 | AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | CommonCrypto AES-CTR, Kotlin GHASH (constant-time) | Kotlin, constant-time | Kotlin, constant-time |
 | AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time | Kotlin, constant-time |
@@ -63,6 +64,7 @@ import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
+import com.vitorpamplona.crypto.digest.DigestInstance
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -74,6 +76,11 @@ val macKey = RandomInstance.bytes(32)
 val mac = MacInstance("HmacSHA256", macKey)
 mac.update(message)
 val tag = mac.doFinal()
+
+// A running transcript hash, snapshotted without finishing it, as TLS 1.3 does.
+val transcript = DigestInstance("SHA-384")
+transcript.update(clientHello)
+val helloHash = transcript.copy().digest() // transcript carries on
 
 val hkdf = Hkdf() // HMAC-SHA256
 val okm = hkdf.expand(hkdf.extract(ikm, salt), info, 42)
@@ -126,7 +133,7 @@ Every primitive has known-answer vectors in `commonTest`, run on every platform:
 FIPS 197, NIST SP 800-38A (CBC) and the GCM specification's test cases, RFC 2202, RFC 4231,
 RFC 5869, RFC 7748, RFC 8032, RFC 8439 (including the Poly1305 edge cases of Appendix A.3),
 RFC 9001 (`expandLabel`), draft-irtf-cfrg-xchacha, the RIPEMD-160 and Keccak reference vectors.
-On top of those, every platform runs Project Wycheproof's 2,674 vectors for AES-GCM, AES-CBC,
+On top of those, every platform runs Project Wycheproof's 2,931 vectors for AES-GCM, AES-CBC,
 ChaCha20-Poly1305, XChaCha20-Poly1305, X25519, Ed25519, HMAC and HKDF: the counter wraps, odd
 nonce sizes, modified tags, bad padding, low-order and non-canonical points and malleable
 signatures that spec vectors miss (`scripts/wycheproof/generate.py` regenerates them). The web

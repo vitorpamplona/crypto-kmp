@@ -24,7 +24,8 @@ import com.vitorpamplona.crypto.mac.HmacAlgorithm
 import com.vitorpamplona.crypto.mac.MacInstance
 
 /**
- * HKDF (RFC 5869) over the HMAC named by [algorithm]: HmacSHA1, HmacSHA256 or HmacSHA512.
+ * HKDF (RFC 5869) over the HMAC named by [algorithm]: HmacSHA1, HmacSHA256, HmacSHA384 or
+ * HmacSHA512. [hashLen] follows it: 20, 32, 48 or 64 bytes.
  * Any other name throws [IllegalArgumentException].
  */
 public class Hkdf(

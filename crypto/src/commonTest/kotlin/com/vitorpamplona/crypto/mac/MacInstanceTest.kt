@@ -140,6 +140,33 @@ class MacInstanceTest {
     }
 
     @Test
+    fun hmacSha384Rfc4231() {
+        // Cases 1, 2 and 7 (key and data both past the 128-byte block), through the platform's HMAC.
+        val cases =
+            listOf(
+                Triple(key1, message1, "afd03944d84895626b0825f4ab46907f15f9dadbe4101ec682aa034c7cebc59cfaea9ea9076ede7f4af152e8b2fa9cb6"),
+                Triple(key2, message2, "af45d2e376484031617f78d2b58a6b1b9c7ef464f5a01b47e42ec3736322445e8e2240ca5e69e2c78b3239ecfab21649"),
+                Triple(
+                    ByteArray(131) { 0xaa.toByte() },
+                    (
+                        "This is a test using a larger than block-size key and a larger than block-size data. " +
+                            "The key needs to be hashed before being used by the HMAC algorithm."
+                    ).encodeToByteArray(),
+                    "6617178e941f020d351e2f254e8fd32c602420feb0b8fb9adccebb82461e99c5a678cc31e799176d3860e6110c46523e",
+                ),
+            )
+        for (name in listOf("HmacSHA384", "hmacsha384")) {
+            val mac = MacInstance(name, key1)
+            assertEquals(48, mac.getMacLength())
+            for ((key, message, expected) in cases) {
+                mac.init(key, name)
+                mac.update(message)
+                assertEquals(expected, mac.doFinal().hex(), name)
+            }
+        }
+    }
+
+    @Test
     fun namesMatchIgnoringCase() {
         for (name in listOf("HmacSHA256", "hmacsha256", "HMACSHA256")) {
             val mac = MacInstance(name, key2)
@@ -150,7 +177,7 @@ class MacInstanceTest {
 
     @Test
     fun unknownAlgorithmsThrowIllegalArgument() {
-        for (name in listOf("", "HmacMD5", "HmacSHA384", "SHA-256", "Hmac-SHA256", "HmacSHA3-256")) {
+        for (name in listOf("", "HmacMD5", "HmacSHA224", "SHA-256", "Hmac-SHA256", "HmacSHA3-256")) {
             assertFailsWith<IllegalArgumentException>(name) { MacInstance(name, key1) }
         }
         val mac = MacInstance("HmacSHA256", key2)

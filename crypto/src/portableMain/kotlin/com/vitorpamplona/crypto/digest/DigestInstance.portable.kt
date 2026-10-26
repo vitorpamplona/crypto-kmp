@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.crypto.digest
 
-public actual class DigestInstance actual constructor(
-    algorithm: String,
+public actual class DigestInstance private constructor(
+    private val digest: StreamingDigest,
 ) {
-    private val digest = kotlinStreamingDigest(DigestAlgorithm.of(algorithm))
+    public actual constructor(algorithm: String) : this(kotlinStreamingDigest(DigestAlgorithm.of(algorithm)))
 
     public actual fun update(array: ByteArray): Unit = digest.update(array)
 
@@ -35,4 +35,6 @@ public actual class DigestInstance actual constructor(
         digest.update(input)
         return digest.digest()
     }
+
+    public actual fun copy(): DigestInstance = DigestInstance(digest.copy())
 }
