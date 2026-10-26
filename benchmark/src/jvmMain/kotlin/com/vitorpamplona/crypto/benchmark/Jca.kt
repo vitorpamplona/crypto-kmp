@@ -25,11 +25,17 @@ import kotlinx.benchmark.Scope
 import kotlinx.benchmark.Setup
 import kotlinx.benchmark.State
 import java.math.BigInteger
+import java.security.AlgorithmParameters
 import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECParameterSpec
+import java.security.spec.ECPoint
+import java.security.spec.ECPrivateKeySpec
+import java.security.spec.ECPublicKeySpec
 import java.security.spec.EdECPoint
 import java.security.spec.EdECPrivateKeySpec
 import java.security.spec.EdECPublicKeySpec
@@ -59,6 +65,8 @@ class Jca {
     private lateinit var ed25519Private: PrivateKey
     private lateinit var ed25519Public: PublicKey
     private lateinit var ed25519Signature: ByteArray
+    private lateinit var p256Private: PrivateKey
+    private lateinit var p256Public: PublicKey
 
     @Setup
     fun setup() {
@@ -79,6 +87,11 @@ class Jca {
                 .keyPairFromSeed(Inputs.ed25519Seed)
                 .publicKey
         ed25519Public = ed.generatePublic(EdECPublicKeySpec(NamedParameterSpec.ED25519, edPoint(publicBytes)))
+        val p256 = AlgorithmParameters.getInstance("EC").apply { init(ECGenParameterSpec("secp256r1")) }.getParameterSpec(ECParameterSpec::class.java)
+        val ec = KeyFactory.getInstance("EC")
+        p256Private = ec.generatePrivate(ECPrivateKeySpec(BigInteger(1, Inputs.p256Private), p256))
+        val point = ECPoint(BigInteger(1, Inputs.p256Public.copyOfRange(1, 33)), BigInteger(1, Inputs.p256Public.copyOfRange(33, 65)))
+        p256Public = ec.generatePublic(ECPublicKeySpec(point, p256))
     }
 
     @Benchmark
@@ -111,6 +124,14 @@ class Jca {
         val agreement = KeyAgreement.getInstance("XDH")
         agreement.init(x25519Private)
         agreement.doPhase(x25519Public, true)
+        return agreement.generateSecret()
+    }
+
+    @Benchmark
+    fun p256SharedSecret(): ByteArray {
+        val agreement = KeyAgreement.getInstance("ECDH")
+        agreement.init(p256Private)
+        agreement.doPhase(p256Public, true)
         return agreement.generateSecret()
     }
 

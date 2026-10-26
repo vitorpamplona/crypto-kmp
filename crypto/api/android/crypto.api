@@ -172,6 +172,29 @@ public final class com/vitorpamplona/crypto/digest/RIPEMD160Digest : com/vitorpa
 	public fun reset ()V
 }
 
+public final class com/vitorpamplona/crypto/ec/P256 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/ec/P256;
+	public static final field PRIVATE_KEY_LENGTH I
+	public static final field PUBLIC_KEY_LENGTH I
+	public static final field SHARED_SECRET_LENGTH I
+	public final fun dh ([B[B)[B
+	public final fun generateKeyPair ()Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public final fun publicFromPrivate ([B)[B
+}
+
+public final class com/vitorpamplona/crypto/ec/P256KeyPair {
+	public fun <init> ([B[B)V
+	public final fun component1 ()[B
+	public final fun component2 ()[B
+	public final fun copy ([B[B)Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public static synthetic fun copy$default (Lcom/vitorpamplona/crypto/ec/P256KeyPair;[B[BILjava/lang/Object;)Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPrivateKey ()[B
+	public final fun getPublicKey ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/vitorpamplona/crypto/kdf/Hkdf {
 	public fun <init> ()V
 	public fun <init> (Ljava/lang/String;)V

@@ -63,6 +63,9 @@ class SameOutputJvmTest {
         assertContentEquals(kmp().x25519PublicKey(), bc().x25519PublicKey())
         assertContentEquals(kmp().x25519SharedSecret(), jca().x25519SharedSecret())
         assertContentEquals(kmp().x25519SharedSecret(), bc().x25519SharedSecret())
+        assertContentEquals(kmp().p256PublicKey(), bc().p256PublicKey())
+        assertContentEquals(kmp().p256SharedSecret(), jca().p256SharedSecret())
+        assertContentEquals(kmp().p256SharedSecret(), bc().p256SharedSecret())
         // Ed25519 signatures are deterministic.
         assertContentEquals(kmp().ed25519Sign(), jca().ed25519Sign())
         assertContentEquals(kmp().ed25519Sign(), bc().ed25519Sign())

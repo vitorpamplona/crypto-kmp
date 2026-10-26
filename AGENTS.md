@@ -11,7 +11,8 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 - `crypto/` — the library, in `com.vitorpamplona.crypto.*`: `sha2` (SHA-1/256/512, `sha256()`,
   `Sha256Midstate`, the JVM `Sha256Pool`), `digest` (`DigestInstance`, RIPEMD-160, Keccak), `mac`
   (`MacInstance`, HMAC), `kdf` (`Hkdf`), `aes` (`AESGCM`, `AESCBC`), `chacha` (ChaCha20,
-  Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305), `curve25519` (X25519, Ed25519), `random`
+  Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305), `curve25519` (X25519, Ed25519), `ec` (P-256
+  ECDH: `P256`, over `P256Field` and `P256Point`, room for P-384 and ECDSA later), `random`
   (`RandomInstance`, `SecureRandom`), plus `SymmetricCipher` and `equalsConstantTime` at the root.
 - Source sets: `jvmAndroid` (JCA, shared by JVM and Android); `nonJvmMain` (`AESGCM` over the
   platform's `gcmKey`, SHA-512 for Ed25519 and `SecureRandom` every other target uses) above
@@ -27,7 +28,8 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   against Android's JCA (AndroidOpenSSL) and Bouncy Castle, with the same operations and a
   same-bytes test. It needs a physical device for numbers; CI dry-runs it on an emulator.
 - `scripts/wycheproof/generate.py` — turns Wycheproof's JSON into `commonTest` data; never edit
-  the generated `Wycheproof*.kt` by hand.
+  the generated `Wycheproof*.kt` by hand. `scripts/cavp/generate_ecdh.py` does the same for NIST
+  CAVP's P-256 CDH vectors (`CavpP256Vectors.kt`).
 
 ## Rules
 
