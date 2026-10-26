@@ -172,7 +172,7 @@ public object X25519 {
         // undoes the final bit's.
         var swap = 0L
         for (i in 254 downTo 0) {
-            val r = ((z[i shr 3].toLong() shr (i and 7)) and 1)
+            val r = ((z[i shr 3].toInt() shr (i and 7)) and 1).toLong()
             swap = swap xor r
             Curve25519Field.sel25519(a, b, swap)
             Curve25519Field.sel25519(c, d, swap)

@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 
@@ -45,12 +46,37 @@ kotlin {
         }
 
         withHostTest {}
+
+        // commonTest again, on a device or emulator: ART, and Android's own providers
+        // (AndroidOpenSSL, BoringSSL) behind JCA, which the host tests' desktop JVM doesn't have.
+        // In the "test" tree, so it compiles commonTest like the host tests do.
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
 
     iosArm64()
     iosSimulatorArm64()
     macosArm64()
     linuxX64()
+
+    // The web: Kotlin everywhere, with crypto.getRandomValues for entropy. Web Crypto's
+    // digests and ciphers are async-only, so they can't sit behind this synchronous API.
+    js {
+        browser()
+        // Kotlin/JS emulates Long, so the Curve25519 tests that run thousands of scalar
+        // multiplications take minutes there; Mocha's default would stop each after 2s.
+        // karma.config.d/ raises the browser's limits to match.
+        nodejs { testTask { useMocha { timeout = "10m" } } }
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         commonTest {
@@ -89,36 +115,57 @@ kotlin {
             }
         }
 
-        // Kotlin implementations shared by every native target; appleMain swaps in
-        // CommonCrypto where it has the algorithm.
-        val nativeMain =
-            create("nativeMain") {
+        getByName("androidDeviceTest") {
+            dependsOn(jvmAndroidTest)
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.junit)
+            }
+        }
+
+        // Kotlin implementations shared by every target but the JVM and Android; appleMain
+        // swaps in CommonCrypto where it has the algorithm.
+        val nonJvmMain =
+            create("nonJvmMain") {
                 dependsOn(commonMain.get())
             }
 
-        val nativeTest =
-            create("nativeTest") {
+        val nonJvmTest =
+            create("nonJvmTest") {
                 dependsOn(commonTest.get())
             }
 
         val appleMain =
             create("appleMain") {
-                dependsOn(nativeMain)
+                dependsOn(nonJvmMain)
             }
 
         val appleTest =
             create("appleTest") {
-                dependsOn(nativeTest)
+                dependsOn(nonJvmTest)
+            }
+
+        // The Kotlin digests, HMAC and AES-CBC, for the targets with no platform library to
+        // call: Linux and the web. Each of those brings only its entropy source.
+        val portableMain =
+            create("portableMain") {
+                dependsOn(nonJvmMain)
+            }
+
+        val portableTest =
+            create("portableTest") {
+                dependsOn(nonJvmTest)
             }
 
         val linuxMain =
             create("linuxMain") {
-                dependsOn(nativeMain)
+                dependsOn(portableMain)
             }
 
         val linuxTest =
             create("linuxTest") {
-                dependsOn(nativeTest)
+                dependsOn(portableTest)
             }
 
         listOf("iosArm64", "iosSimulatorArm64", "macosArm64").forEach { target ->
@@ -128,6 +175,11 @@ kotlin {
 
         getByName("linuxX64Main") { dependsOn(linuxMain) }
         getByName("linuxX64Test") { dependsOn(linuxTest) }
+
+        listOf("js", "wasmJs").forEach { target ->
+            getByName("${target}Main") { dependsOn(portableMain) }
+            getByName("${target}Test") { dependsOn(portableTest) }
+        }
     }
 }
 
@@ -155,7 +207,7 @@ mavenPublishing {
         name = "Crypto for Kotlin Multiplatform"
         description =
             "Pure-Kotlin and platform-backed SHA-1/2, HMAC, HKDF, AES-GCM/CBC, ChaCha20-Poly1305, " +
-            "X25519 and Ed25519 for JVM, Android, iOS, macOS and Linux"
+            "X25519 and Ed25519 for JVM, Android, iOS, macOS, Linux, JavaScript and Wasm"
         inceptionYear = "2026"
         url = "https://github.com/vitorpamplona/crypto-kmp/"
         licenses {

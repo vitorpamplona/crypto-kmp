@@ -29,12 +29,16 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
- * The pure-Kotlin ChaCha20 and ChaCha20-Poly1305 every platform runs, against JCA: every
- * plaintext length from 0 to 300 plus a few large ones, AAD lengths around the 16-byte
- * Poly1305 block, and the stream cipher at counters in both halves of the unsigned range.
+ * The pure-Kotlin ChaCha20 and ChaCha20-Poly1305 the platforms without JCA's run, against JCA:
+ * every plaintext length from 0 to 300 plus a few large ones, AAD lengths around the 16-byte
+ * Poly1305 block, and the stream cipher at counters in both halves of the unsigned range. The
+ * public [ChaCha20Poly1305], which is JCA's here, is held to the same bytes.
  */
 class ChaChaJcaTest {
     private val random = Random(2026)
@@ -75,10 +79,12 @@ class ChaChaJcaTest {
         val label = "plaintext $plaintextSize, ad $adSize"
 
         val jca = jcaSeal(key, nonce, ad, plaintext)
-        val ours = ChaCha20Poly1305.encrypt(plaintext, ad, nonce, key)
-        assertContentEquals(jca, ours, label)
+        val kotlin = ChaCha20Poly1305.kotlinSeal(plaintext, ad, nonce, key)
+        assertContentEquals(jca, kotlin, label)
+        assertContentEquals(plaintext, ChaCha20Poly1305.kotlinOpen(jca, ad, nonce, key), label)
+        assertContentEquals(plaintext, jcaOpen(key, nonce, ad, kotlin), label)
+        assertContentEquals(jca, ChaCha20Poly1305.encrypt(plaintext, ad, nonce, key), label)
         assertContentEquals(plaintext, ChaCha20Poly1305.decrypt(jca, ad, nonce, key), label)
-        assertContentEquals(plaintext, jcaOpen(key, nonce, ad, ours), label)
     }
 
     @Test
@@ -110,9 +116,25 @@ class ChaChaJcaTest {
             sealed[i] = (sealed[i].toInt() xor (1 shl random.nextInt(8))).toByte()
 
             assertFailsWith<AEADBadTagException> { jcaOpen(key, nonce, ad, sealed) }
+            assertNull(ChaCha20Poly1305.kotlinOpen(sealed, ad, nonce, key))
             assertFailsWith<IllegalArgumentException> { ChaCha20Poly1305.decrypt(sealed, ad, nonce, key) }
             assertNull(ChaCha20Poly1305.decryptOrNull(sealed, ad, nonce, key))
         }
+    }
+
+    @Test
+    fun jcaIsUsedExactlyWhenHotSpotAcceleratesIt() {
+        val accelerated =
+            JcaChaCha20Poly1305.hotSpotFlag("UseChaCha20Intrinsics") && JcaChaCha20Poly1305.hotSpotFlag("UsePoly1305Intrinsics")
+        if (accelerated) assertIs<JcaChaCha20Poly1305>(platformChaCha20Poly1305) else assertNull(platformChaCha20Poly1305)
+    }
+
+    @Test
+    fun hotSpotFlagsReadTrueFalseAndAbsent() {
+        // Boolean product flags with fixed defaults: TLABs on, flag printing off.
+        assertTrue(JcaChaCha20Poly1305.hotSpotFlag("UseTLAB"))
+        assertFalse(JcaChaCha20Poly1305.hotSpotFlag("PrintFlagsFinal"))
+        assertFalse(JcaChaCha20Poly1305.hotSpotFlag("NoSuchFlagAnywhere"))
     }
 
     @Test

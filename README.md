@@ -7,8 +7,8 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/crypto-kmp/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/crypto-kmp/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/crypto-kmp?labelColor=27303D&color=0877d2)](LICENSE)
 
-Cryptographic primitives for Kotlin Multiplatform: JVM, Android, iOS, macOS and Linux. The
-library depends on nothing but the Kotlin stdlib. It uses the platform's implementation where
+Cryptographic primitives for Kotlin Multiplatform: JVM, Android, iOS, macOS, Linux, JavaScript
+and Wasm. The library depends on nothing but the Kotlin stdlib. It uses the platform's implementation where
 one is fast and available (JCA on the JVM and Android, CommonCrypto on Apple) and pure Kotlin
 everywhere else. The AES and GHASH cores are constant-time.
 
@@ -32,23 +32,41 @@ dependencies {
 | Android | minSdk 26 |
 | Apple | iosArm64, iosSimulatorArm64, macosArm64 |
 | Linux | linuxX64 |
+| Web | js and wasmJs, in browsers and Node.js: any runtime with Web Crypto's `crypto.getRandomValues` (Node.js 19+, Deno and Bun too) |
 
 ## What's inside
 
-| Primitive | Package | JVM / Android | Apple | Linux |
-|---|---|---|---|---|
-| SHA-256 one-shot (`sha256`, `sha256Into`) | `sha2` | JCA (pooled) | CommonCrypto | Kotlin |
-| `DigestInstance` (SHA-1, SHA-256, SHA-512, RIPEMD-160), streaming | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin |
-| RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin |
-| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin |
-| HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
-| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | Kotlin, constant-time | Kotlin, constant-time |
-| AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time |
-| ChaCha20, Poly1305, ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin |
-| X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin |
-| Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` |
+| Primitive | Package | JVM / Android | Apple | Linux | JS / Wasm |
+|---|---|---|---|---|---|
+| SHA-256 one-shot (`sha256`, `sha256Into`) | `sha2` | JCA (pooled) | CommonCrypto | Kotlin | Kotlin |
+| SHA-384 one-shot (`sha384`) | `sha2` | on `DigestInstance` | on `DigestInstance` | on `DigestInstance` | on `DigestInstance` |
+| `DigestInstance` (SHA-1, SHA-256, SHA-384, SHA-512, RIPEMD-160), streaming, with `copy()` snapshots | `digest` | JCA (SHA), Kotlin (RIPEMD-160) | CommonCrypto (SHA), Kotlin (RIPEMD-160) | Kotlin | Kotlin |
+| RIPEMD-160 (`RIPEMD160Digest`), Keccak (`KeccakDigest`) | `digest` | Kotlin | Kotlin | Kotlin | Kotlin |
+| HMAC-SHA1 / HMAC-SHA256 / HMAC-SHA384 / HMAC-SHA512 (`MacInstance`) | `mac` | JCA | CommonCrypto | Kotlin | Kotlin |
+| HKDF (RFC 5869) and TLS 1.3 `expandLabel` | `kdf` | on `MacInstance` | on `MacInstance` | on `MacInstance` | on `MacInstance` |
+| AES-GCM (any nonce length, 128-bit tag) | `aes` | JCA | CommonCrypto AES-CTR, Kotlin GHASH (constant-time) | Kotlin, constant-time | Kotlin, constant-time |
+| AES-CBC with PKCS#7 | `aes` | JCA | CommonCrypto | Kotlin, constant-time | Kotlin, constant-time |
+| ChaCha20, Poly1305 | `chacha` | Kotlin | Kotlin | Kotlin | Kotlin |
+| ChaCha20-Poly1305, XChaCha20-Poly1305 | `chacha` | JCA where it is native or vectorised, else Kotlin | Kotlin | Kotlin | Kotlin |
+| X25519, Ed25519 | `curve25519` | Kotlin (Ed25519 hashes with JCA) | Kotlin | Kotlin | Kotlin |
+| P-256 (secp256r1) ECDH (`P256`) | `ec` | Kotlin | Kotlin | Kotlin | Kotlin |
+| Secure random (`RandomInstance`) | `random` | `java.security.SecureRandom` | `SecRandomCopyBytes` | `getrandom(2)` | `crypto.getRandomValues` |
 
 Packages are under `com.vitorpamplona.crypto`.
+
+On the JVM and Android, ChaCha20-Poly1305 (and XChaCha20-Poly1305, which runs on it) calls JCA
+only where JCA is faster: Android's BoringSSL on API 28+, a bundled Conscrypt, or SunJCE when
+HotSpot compiles both ChaCha20 and Poly1305 to vector instructions (JDK 20+ on a CPU with them).
+Java 17's SunJCE is pure Java and slower than the Kotlin code, so there the Kotlin code runs.
+The provider is picked by name and checked against the Kotlin output once, at first use.
+
+On the web everything but the random numbers is Kotlin: Web Crypto's digests and ciphers are
+async-only (they return a `Promise`), so they can't sit behind this synchronous API. Kotlin/JS has
+no 64-bit integers and emulates `Long`, which makes the 64-bit arithmetic of SHA-512, GHASH,
+Poly1305 and Curve25519 slower there than anywhere else: an X25519 or Ed25519 operation takes tens
+of milliseconds in Node.js. Kotlin/Wasm runs 64-bit arithmetic natively, so prefer `wasmJs` where
+those are on a hot path. The emulated `Long` multiply also branches on its operands, so every
+product of secrets here goes through a branch-free multiply on Kotlin/JS instead.
 
 ## Usage
 
@@ -57,6 +75,8 @@ import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.X25519
+import com.vitorpamplona.crypto.digest.DigestInstance
+import com.vitorpamplona.crypto.ec.P256
 import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -68,6 +88,11 @@ val macKey = RandomInstance.bytes(32)
 val mac = MacInstance("HmacSHA256", macKey)
 mac.update(message)
 val tag = mac.doFinal()
+
+// A running transcript hash, snapshotted without finishing it, as TLS 1.3 does.
+val transcript = DigestInstance("SHA-384")
+transcript.update(clientHello)
+val helloHash = transcript.copy().digest() // transcript carries on
 
 val hkdf = Hkdf() // HMAC-SHA256
 val okm = hkdf.expand(hkdf.extract(ikm, salt), info, 42)
@@ -91,6 +116,11 @@ val shared = X25519.dh(alice.privateKey, bob.publicKey)
 val signer = Ed25519.generateKeyPair()
 val signature = Ed25519.sign(message, signer.privateKey)
 check(Ed25519.verify(message, signature, signer.publicKey))
+
+// P-256 ECDH with TLS 1.3's encodings: a 65-byte uncompressed public key, a 32-byte x-coordinate.
+val ours = P256.generateKeyPair()
+val theirs = P256.generateKeyPair()
+val p256Shared = P256.dh(ours.privateKey, theirs.publicKey) // throws on an invalid peer point
 ```
 
 Every platform accepts and rejects the same inputs, with the same exceptions:
@@ -120,9 +150,24 @@ Every primitive has known-answer vectors in `commonTest`, run on every platform:
 FIPS 197, NIST SP 800-38A (CBC) and the GCM specification's test cases, RFC 2202, RFC 4231,
 RFC 5869, RFC 7748, RFC 8032, RFC 8439 (including the Poly1305 edge cases of Appendix A.3),
 RFC 9001 (`expandLabel`), draft-irtf-cfrg-xchacha, the RIPEMD-160 and Keccak reference vectors.
+On top of those, every platform runs Project Wycheproof's 2,931 vectors for AES-GCM, AES-CBC,
+ChaCha20-Poly1305, XChaCha20-Poly1305, X25519, Ed25519, HMAC and HKDF: the counter wraps, odd
+nonce sizes, modified tags, bad padding, low-order and non-canonical points and malleable
+signatures that spec vectors miss (`scripts/wycheproof/generate.py` regenerates them). The web
+targets run all of it in Node.js and in headless Chrome.
+P-256 ECDH runs NIST CAVP's 25 KAS ECC CDH primitive vectors, RFC 5903 §8.1 and Wycheproof's
+355 `ecdh_secp256r1_ecpoint` vectors, every invalid-curve and badly encoded point among them
+rejected, and the JVM checks it against JCA's ECDH on random keys.
 Each primitive also has negative tests (tampered tags, bad padding, wrong sizes, low-order and
 non-canonical points), and JVM tests compare AES, ChaCha20-Poly1305, X25519, Ed25519, SHA and
 HMAC with JCA on random inputs.
+
+## Performance
+
+[BENCHMARKS.md](BENCHMARKS.md) compares crypto-kmp with JCA and Bouncy Castle on the JVM, and with
+noble, TweetNaCl and node:crypto on Node.js. In short: on the JVM it matches JCA where it wraps it
+and beats Bouncy Castle on everything but Curve25519; Kotlin/Wasm beats noble on most operations;
+Kotlin/JS is several times slower than noble, so prefer `wasmJs` on the web.
 
 ## Developer Setup
 
@@ -130,9 +175,11 @@ HMAC with JCA on random inputs.
 ./gradlew installGitHook            # pre-commit (spotless) and pre-push (tests) hooks
 ./gradlew spotlessApply
 ./gradlew :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test
+./gradlew :crypto:jsTest :crypto:wasmJsTest        # Node.js and headless Chrome (jsNodeTest, wasmJsNodeTest for Node only)
 ./gradlew :crypto:compileAppleMainKotlinMetadata   # Apple code, compiled on any host
 ./gradlew :crypto:checkKotlinAbi    # public API matches crypto/api; updateKotlinAbi to accept a change
 ./gradlew :crypto:iosSimulatorArm64Test :crypto:macosArm64Test   # macOS only
+./gradlew :crypto:connectedAndroidDeviceTest   # the shared tests on a connected Android device or emulator
 ```
 
 ## Versioning
@@ -141,32 +188,6 @@ Releases follow [semantic versioning](https://semver.org/): a breaking change to
 bumps the major version. Each release is tagged `v<version>` and listed on the
 [releases page](https://github.com/vitorpamplona/crypto-kmp/releases). The public API is recorded
 in `crypto/api/` and checked by `checkKotlinAbi`, so a change to it shows up in review.
-
-### Migrating from 1.x
-
-2.0 makes every platform behave the same and closes the gaps a review found. What callers see:
-
-- **Errors**: AES-GCM, AES-CBC, ChaCha20-Poly1305 and XChaCha20-Poly1305 throw
-  `IllegalArgumentException` on a bad tag or padding, on every platform. Code that caught
-  `AEADBadTagException`, `BadPaddingException` or `IllegalStateException` catches
-  `IllegalArgumentException`, or uses `decryptOrNull`. Wrong key, nonce and IV sizes throw where
-  they used to be truncated or fail later.
-- **AES**: a second `encrypt` on one `AESGCM` throws. `AESGCM.NAME` and `AESCBC.NAME` are now
-  `AES_GCM_NAME` and `AES_CBC_NAME`. `AESCBC.decrypt` of an empty array throws on the JVM too.
-  `AESGCM.decryptOrNull(bytes, aad)` is new.
-- **ChaCha**: `ChaCha20` is an `object` (`ChaCha20.encrypt(…)`). A block counter that would wrap
-  past 2^32 throws. Both AEADs gained `decryptOrNull`.
-- **Curve25519**: `Ed25519.verify` returns `false` (instead of throwing) for a wrong-length key,
-  and rejects small-order and non-canonical keys and `R`. `Ed25519.sign` and
-  `publicFromPrivate` derive the public key from the seed.
-- **Hashes and MACs**: `Hkdf(algorithm, hashLen)` is `Hkdf(algorithm)`, with `hashLen` derived.
-  `DigestInstance` and `MacInstance` accept the same names everywhere (RIPEMD-160 now works on
-  the JVM, SHA-512 and HMAC-SHA1 off it). `KeccakDigest()` is Keccak-256 (it was 288-bit), and
-  its internal state is private. `Memoable`, `ExtendedDigest` and `Pack` are gone.
-- **Random**: on the JVM and Android, `SecureRandom` wraps `java.security.SecureRandom` instead
-  of being it. `RandomInstance.randomizer` is private.
-- **Visibility**: `threadLocalDigest`, `FixedKey`, `DigestInstance.digest`, `MacInstance.mac` and
-  `Sha256Hasher.digest` are no longer public.
 
 ## License
 
@@ -177,4 +198,9 @@ MIT, see [LICENSE](LICENSE). Ported code keeps its attribution in the source:
 - `GeneralDigest`, `RIPEMD160Digest`, `KeccakDigest` and `Digest` are ports of Bouncy Castle's,
   Copyright (c) 2000-2024 The Legion of the Bouncy Castle Inc., MIT.
 - Poly1305 follows Andrew Moon's poly1305-donna-32 (public domain / MIT).
+- The test vectors in `crypto/src/commonTest/.../wycheproof/` are Project Wycheproof's,
+  Copyright Google LLC, Apache License 2.0 (its `LICENSE` is next to them).
 - The Curve25519 field and point arithmetic follow TweetNaCl and ref10 (both public domain).
+- P-256's point arithmetic follows the complete formulas of Renes, Costello and Batina,
+  "Complete addition formulas for prime order elliptic curves" (EUROCRYPT 2016), Algorithms 4
+  and 6. Its CDH test vectors are NIST CAVP's (a work of the US government).

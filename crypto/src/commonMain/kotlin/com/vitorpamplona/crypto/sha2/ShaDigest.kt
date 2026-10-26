@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.sha2
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /**
  * Pure-Kotlin incremental SHA-1 and SHA-2 (FIPS 180-4), for the targets without a
  * platform digest this library calls directly. JVM and Android use JCA instead.
@@ -277,11 +279,20 @@ internal class Sha1Digest : ShaDigest(blockSize = 64, digestSize = 20, lengthSiz
     }
 }
 
-internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, lengthSize = 16) {
-    private val state = IV.copyOf()
+/**
+ * SHA-512, and through [Sha384Digest] SHA-384: the same compression over eight 64-bit words,
+ * started from [iv], with the output cut to [digestSize] bytes (FIPS 180-4 §6.4, §6.5).
+ */
+internal open class Sha512Digest protected constructor(
+    digestSize: Int,
+    private val iv: LongArray,
+) : ShaDigest(blockSize = 128, digestSize = digestSize, lengthSize = 16) {
+    constructor() : this(64, IV)
+
+    private val state = iv.copyOf()
     private val w = LongArray(80)
 
-    override fun newInstance() = Sha512Digest()
+    override fun newInstance(): ShaDigest = Sha512Digest()
 
     override fun copyStateFrom(other: ShaDigest) {
         (other as Sha512Digest).state.copyInto(state)
@@ -295,7 +306,7 @@ internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, length
             var word = 0L
             val i = offset + 8 * t
             for (j in 0 until 8) {
-                word = (word shl 8) or (block[i + j].toLong() and 0xff)
+                word = (word shl 8) or block[i + j].toUnsignedLong()
             }
             w[t] = word
         }
@@ -344,15 +355,16 @@ internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, length
     }
 
     override fun resetState() {
-        IV.copyInto(state)
+        iv.copyInto(state)
         w.fill(0)
     }
 
+    // The first digestSize / 8 words: all eight for SHA-512, six for SHA-384.
     override fun writeState(
         out: ByteArray,
         offset: Int,
     ) {
-        for (i in 0 until 8) {
+        for (i in 0 until digestSize / 8) {
             val word = state[i]
             val o = offset + 8 * i
             for (j in 0 until 8) {
@@ -461,3 +473,21 @@ internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, length
             )
     }
 }
+
+/** SHA-384: SHA-512's compression from its own initial values (FIPS 180-4 §5.3.4), cut to 48 bytes. */
+internal class Sha384Digest : Sha512Digest(48, SHA384_IV) {
+    override fun newInstance(): ShaDigest = Sha384Digest()
+}
+
+// The first 64 bits of the fractional parts of the square roots of the 9th to 16th primes.
+private val SHA384_IV =
+    longArrayOf(
+        0xcbbb9d5dc1059ed8UL.toLong(),
+        0x629a292a367cd507UL.toLong(),
+        0x9159015a3070dd17UL.toLong(),
+        0x152fecd8f70e5939UL.toLong(),
+        0x67332667ffc00b31UL.toLong(),
+        0x8eb44a8768581511UL.toLong(),
+        0xdb0c2e0d64f98fa7UL.toLong(),
+        0x47b5481dbefa4fa4UL.toLong(),
+    )

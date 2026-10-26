@@ -48,6 +48,16 @@ jobs:
       - name: Check Linux native
         run: ./gradlew :crypto:linuxX64Test
 
+      # The Kotlin implementations again, on Kotlin/JS (which emulates 64-bit Long) and on
+      # Kotlin/Wasm, each in Node.js and in headless Chrome.
+      - name: Check JavaScript and Wasm
+        run: ./gradlew :crypto:jsTest :crypto:wasmJsTest
+
+      # The benchmark module's tests: every compared library (JCA, Bouncy Castle, noble,
+      # TweetNaCl, node:crypto) gives this library's bytes for each benchmarked operation.
+      - name: Check benchmarks compute the same bytes
+        run: ./gradlew :benchmark:jvmTest :benchmark:jsNodeTest
+
       # Apple code compiles on Linux as metadata, so a CommonCrypto mistake fails here in
       # minutes instead of in the macOS job.
       - name: Check Apple code compiles
@@ -56,8 +66,51 @@ jobs:
       - name: Build (gradle)
         run: ./gradlew assemble
 
+  # commonTest (Wycheproof included) on ART, through Android's own providers (AndroidOpenSSL),
+  # which the host tests' desktop JVM doesn't have; API 26 is minSdk, before Android had
+  # ChaCha20-Poly1305. The benchmarks run once each (dry run), with their same-bytes test:
+  # emulator timings mean little, so numbers come from a device (see BENCHMARKS.md).
+  test-android:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [26, 34]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Device tests and benchmark dry run
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            ./gradlew :crypto:connectedAndroidDeviceTest
+            ./gradlew :benchmark-android:connectedReleaseAndroidTest -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.dryRunMode.enable=true -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY,UNLOCKED
+
   # Apple test binaries link and run only on macOS: this is the one place the CommonCrypto
-  # actuals (DigestInstance, MacInstance, AESCBC, SecureRandom) execute.
+  # actuals (DigestInstance, MacInstance, AESCBC, AESGCM's AES-CTR, SecureRandom) execute.
   test-apple:
     needs: build
     runs-on: macos-latest

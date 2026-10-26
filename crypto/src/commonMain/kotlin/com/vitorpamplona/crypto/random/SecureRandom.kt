@@ -22,7 +22,8 @@ package com.vitorpamplona.crypto.random
 
 /**
  * The platform's cryptographically secure random generator: `java.security.SecureRandom`
- * on JVM and Android, `SecRandomCopyBytes` on Apple, `getrandom(2)` on Linux.
+ * on JVM and Android, `SecRandomCopyBytes` on Apple, `getrandom(2)` on Linux and Web Crypto's
+ * `crypto.getRandomValues` on JavaScript and Wasm.
  *
  * The bounded draws are computed here from the raw ones with [boundedNextInt] and
  * [boundedNextLong], so every platform turns the same random bits into the same value.

@@ -1,5 +1,5 @@
 // Klib ABI Dump
-// Targets: [iosArm64, iosSimulatorArm64, linuxX64, macosArm64]
+// Targets: [iosArm64, iosSimulatorArm64, js, linuxX64, macosArm64, wasmJs]
 // Rendering settings:
 // - Signature version: 2
 // - Show manifest properties: true
@@ -102,6 +102,7 @@ final class com.vitorpamplona.crypto.curve25519/X25519KeyPair { // com.vitorpamp
 final class com.vitorpamplona.crypto.digest/DigestInstance { // com.vitorpamplona.crypto.digest/DigestInstance|null[0]
     constructor <init>(kotlin/String) // com.vitorpamplona.crypto.digest/DigestInstance.<init>|<init>(kotlin.String){}[0]
 
+    final fun copy(): com.vitorpamplona.crypto.digest/DigestInstance // com.vitorpamplona.crypto.digest/DigestInstance.copy|copy(){}[0]
     final fun digest(): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(){}[0]
     final fun digest(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.digest/DigestInstance.digest|digest(kotlin.ByteArray){}[0]
     final fun update(kotlin/Byte) // com.vitorpamplona.crypto.digest/DigestInstance.update|update(kotlin.Byte){}[0]
@@ -128,6 +129,22 @@ final class com.vitorpamplona.crypto.digest/RIPEMD160Digest : com.vitorpamplona.
     final fun getAlgorithmName(): kotlin/String // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getAlgorithmName|getAlgorithmName(){}[0]
     final fun getDigestSize(): kotlin/Int // com.vitorpamplona.crypto.digest/RIPEMD160Digest.getDigestSize|getDigestSize(){}[0]
     final fun reset() // com.vitorpamplona.crypto.digest/RIPEMD160Digest.reset|reset(){}[0]
+}
+
+final class com.vitorpamplona.crypto.ec/P256KeyPair { // com.vitorpamplona.crypto.ec/P256KeyPair|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // com.vitorpamplona.crypto.ec/P256KeyPair.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val privateKey // com.vitorpamplona.crypto.ec/P256KeyPair.privateKey|{}privateKey[0]
+        final fun <get-privateKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256KeyPair.privateKey.<get-privateKey>|<get-privateKey>(){}[0]
+    final val publicKey // com.vitorpamplona.crypto.ec/P256KeyPair.publicKey|{}publicKey[0]
+        final fun <get-publicKey>(): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256KeyPair.publicKey.<get-publicKey>|<get-publicKey>(){}[0]
+
+    final fun component1(): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256KeyPair.component1|component1(){}[0]
+    final fun component2(): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256KeyPair.component2|component2(){}[0]
+    final fun copy(kotlin/ByteArray = ..., kotlin/ByteArray = ...): com.vitorpamplona.crypto.ec/P256KeyPair // com.vitorpamplona.crypto.ec/P256KeyPair.copy|copy(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.vitorpamplona.crypto.ec/P256KeyPair.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.vitorpamplona.crypto.ec/P256KeyPair.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.vitorpamplona.crypto.ec/P256KeyPair.toString|toString(){}[0]
 }
 
 final class com.vitorpamplona.crypto.kdf/Hkdf { // com.vitorpamplona.crypto.kdf/Hkdf|null[0]
@@ -224,6 +241,19 @@ final object com.vitorpamplona.crypto.curve25519/X25519 { // com.vitorpamplona.c
     final fun publicFromPrivate(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.curve25519/X25519.publicFromPrivate|publicFromPrivate(kotlin.ByteArray){}[0]
 }
 
+final object com.vitorpamplona.crypto.ec/P256 { // com.vitorpamplona.crypto.ec/P256|null[0]
+    final const val PRIVATE_KEY_LENGTH // com.vitorpamplona.crypto.ec/P256.PRIVATE_KEY_LENGTH|{}PRIVATE_KEY_LENGTH[0]
+        final fun <get-PRIVATE_KEY_LENGTH>(): kotlin/Int // com.vitorpamplona.crypto.ec/P256.PRIVATE_KEY_LENGTH.<get-PRIVATE_KEY_LENGTH>|<get-PRIVATE_KEY_LENGTH>(){}[0]
+    final const val PUBLIC_KEY_LENGTH // com.vitorpamplona.crypto.ec/P256.PUBLIC_KEY_LENGTH|{}PUBLIC_KEY_LENGTH[0]
+        final fun <get-PUBLIC_KEY_LENGTH>(): kotlin/Int // com.vitorpamplona.crypto.ec/P256.PUBLIC_KEY_LENGTH.<get-PUBLIC_KEY_LENGTH>|<get-PUBLIC_KEY_LENGTH>(){}[0]
+    final const val SHARED_SECRET_LENGTH // com.vitorpamplona.crypto.ec/P256.SHARED_SECRET_LENGTH|{}SHARED_SECRET_LENGTH[0]
+        final fun <get-SHARED_SECRET_LENGTH>(): kotlin/Int // com.vitorpamplona.crypto.ec/P256.SHARED_SECRET_LENGTH.<get-SHARED_SECRET_LENGTH>|<get-SHARED_SECRET_LENGTH>(){}[0]
+
+    final fun dh(kotlin/ByteArray, kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256.dh|dh(kotlin.ByteArray;kotlin.ByteArray){}[0]
+    final fun generateKeyPair(): com.vitorpamplona.crypto.ec/P256KeyPair // com.vitorpamplona.crypto.ec/P256.generateKeyPair|generateKeyPair(){}[0]
+    final fun publicFromPrivate(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.ec/P256.publicFromPrivate|publicFromPrivate(kotlin.ByteArray){}[0]
+}
+
 final object com.vitorpamplona.crypto.random/RandomInstance { // com.vitorpamplona.crypto.random/RandomInstance|null[0]
     final val charPool // com.vitorpamplona.crypto.random/RandomInstance.charPool|{}charPool[0]
         final fun <get-charPool>(): kotlin.collections/List<kotlin/Char> // com.vitorpamplona.crypto.random/RandomInstance.charPool.<get-charPool>|<get-charPool>(){}[0]
@@ -245,3 +275,4 @@ final const val com.vitorpamplona.crypto.aes/AES_GCM_NAME // com.vitorpamplona.c
 final fun (kotlin/ByteArray).com.vitorpamplona.crypto/equalsConstantTime(kotlin/ByteArray): kotlin/Boolean // com.vitorpamplona.crypto/equalsConstantTime|equalsConstantTime@kotlin.ByteArray(kotlin.ByteArray){}[0]
 final fun com.vitorpamplona.crypto.sha2/sha256(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256|sha256(kotlin.ByteArray){}[0]
 final fun com.vitorpamplona.crypto.sha2/sha256Into(kotlin/ByteArray, kotlin/ByteArray, kotlin/Int = ...): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha256Into|sha256Into(kotlin.ByteArray;kotlin.ByteArray;kotlin.Int){}[0]
+final fun com.vitorpamplona.crypto.sha2/sha384(kotlin/ByteArray): kotlin/ByteArray // com.vitorpamplona.crypto.sha2/sha384|sha384(kotlin.ByteArray){}[0]

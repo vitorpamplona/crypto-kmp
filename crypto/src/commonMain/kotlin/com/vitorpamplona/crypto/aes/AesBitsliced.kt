@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.crypto.aes
 
+import com.vitorpamplona.crypto.toUnsignedLong
+
 /*
  * Ported from BearSSL's aes_ct64 (src/symcipher/aes_ct64.c, aes_ct64_enc.c,
  * aes_ct64_dec.c): Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>, released
@@ -33,9 +35,9 @@ internal fun requireAesKey(key: ByteArray) =
     }
 
 /**
- * Constant-time AES (FIPS 197) where this library has no platform AES to call: GCM on
- * every native target (CommonCrypto has no public GCM) and CBC on Linux. JVM and Android
- * use JCA for both, and Apple uses CommonCrypto for CBC.
+ * Constant-time AES (FIPS 197) where this library has no platform AES to call: GCM and CBC on
+ * Linux and the web. JVM and Android use JCA for both, and Apple CommonCrypto for both (GCM as
+ * its AES-CTR under [CtrGcmKey], since CommonCrypto has no public GCM).
  *
  * The state is bitsliced: eight 64-bit words hold bit i of every byte of four blocks,
  * and SubBytes is the Boyar-Peralta boolean circuit, so no table is ever indexed by
@@ -237,10 +239,10 @@ private fun interleaveIn(
     w: IntArray,
     offset: Int,
 ) {
-    var x0 = w[offset].toLong() and 0xFFFF_FFFFL
-    var x1 = w[offset + 1].toLong() and 0xFFFF_FFFFL
-    var x2 = w[offset + 2].toLong() and 0xFFFF_FFFFL
-    var x3 = w[offset + 3].toLong() and 0xFFFF_FFFFL
+    var x0 = w[offset].toUnsignedLong()
+    var x1 = w[offset + 1].toUnsignedLong()
+    var x2 = w[offset + 2].toUnsignedLong()
+    var x3 = w[offset + 3].toUnsignedLong()
     x0 = (x0 or (x0 shl 16)) and M0000FFFF
     x1 = (x1 or (x1 shl 16)) and M0000FFFF
     x2 = (x2 or (x2 shl 16)) and M0000FFFF
@@ -542,7 +544,7 @@ private fun subWord(
     q: LongArray,
 ): Int {
     q.fill(0)
-    q[0] = x.toLong() and 0xFFFF_FFFFL
+    q[0] = x.toUnsignedLong()
     ortho(q)
     sbox(q)
     ortho(q)

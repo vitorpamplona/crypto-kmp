@@ -78,14 +78,41 @@ class ShaDigestTest {
     }
 
     @Test
+    fun sha384KnownAnswers() {
+        assertEquals(
+            "38b060a751ac96384cd9327eb1b1e36a21fdb71114be0743" +
+                "4c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b",
+            Sha384Digest().hash(ByteArray(0)),
+        )
+        assertEquals(
+            "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded163" +
+                "1a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
+            Sha384Digest().hash("abc".encodeToByteArray()),
+        )
+        // The 896-bit message, two SHA-384 blocks once padded.
+        assertEquals(
+            "09330c33f71147e83d192fc782cd1b4753111b173b3b05d2" +
+                "2fa08086e3b0f712fcc7c71a557e2db966c3e9fa91746039",
+            Sha384Digest().hash(twoBlock512),
+        )
+    }
+
+    @Test
     fun millionAs() {
         val chunk = ByteArray(1000) { 'a'.code.toByte() }
         val sha256 = Sha256Digest()
+        val sha384 = Sha384Digest()
         val sha512 = Sha512Digest()
         repeat(1000) {
             sha256.update(chunk)
+            sha384.update(chunk)
             sha512.update(chunk)
         }
+        assertEquals(
+            "9d0e1809716474cb086e834e310a4a1ced149e9c00f24852" +
+                "7972cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985",
+            sha384.digest().hex(),
+        )
         assertEquals("cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0", sha256.digest().hex())
         assertEquals(
             "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb" +
@@ -97,7 +124,7 @@ class ShaDigestTest {
     @Test
     fun splitUpdatesMatchOneShot() {
         val random = Random(42)
-        for (digest in listOf(Sha1Digest(), Sha256Digest(), Sha512Digest())) {
+        for (digest in listOf(Sha1Digest(), Sha256Digest(), Sha384Digest(), Sha512Digest())) {
             for (length in 0..300) {
                 val message = random.nextBytes(length)
                 digest.update(message)

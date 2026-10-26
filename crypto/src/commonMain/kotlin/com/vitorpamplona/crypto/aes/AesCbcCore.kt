@@ -25,7 +25,8 @@ internal fun requireCbcIv(iv: ByteArray) = require(iv.size == 16) { "AES-CBC IV 
 
 /**
  * AES-CBC without padding (NIST SP 800-38A §6.2), matching JCA's "AES/CBC/NoPadding": the
- * block-cipher half of [AESCBC] on Linux, which [cbcEncrypt] and [cbcDecrypt] wrap in PKCS#7.
+ * block-cipher half of [AESCBC] on Linux and the web, which [cbcEncrypt] and [cbcDecrypt] wrap
+ * in PKCS#7.
  * Both directions take whole 16-byte blocks and a 16-byte IV; the callers check.
  *
  * Holds the key schedule, so one instance serves many messages; it is thread-safe.

@@ -131,6 +131,7 @@ public abstract interface class com/vitorpamplona/crypto/digest/Digest {
 
 public final class com/vitorpamplona/crypto/digest/DigestInstance {
 	public fun <init> (Ljava/lang/String;)V
+	public final fun copy ()Lcom/vitorpamplona/crypto/digest/DigestInstance;
 	public final fun digest ()[B
 	public final fun digest ([B)[B
 	public final fun update (B)V
@@ -169,6 +170,29 @@ public final class com/vitorpamplona/crypto/digest/RIPEMD160Digest : com/vitorpa
 	public fun getAlgorithmName ()Ljava/lang/String;
 	public fun getDigestSize ()I
 	public fun reset ()V
+}
+
+public final class com/vitorpamplona/crypto/ec/P256 {
+	public static final field INSTANCE Lcom/vitorpamplona/crypto/ec/P256;
+	public static final field PRIVATE_KEY_LENGTH I
+	public static final field PUBLIC_KEY_LENGTH I
+	public static final field SHARED_SECRET_LENGTH I
+	public final fun dh ([B[B)[B
+	public final fun generateKeyPair ()Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public final fun publicFromPrivate ([B)[B
+}
+
+public final class com/vitorpamplona/crypto/ec/P256KeyPair {
+	public fun <init> ([B[B)V
+	public final fun component1 ()[B
+	public final fun component2 ()[B
+	public final fun copy ([B[B)Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public static synthetic fun copy$default (Lcom/vitorpamplona/crypto/ec/P256KeyPair;[B[BILjava/lang/Object;)Lcom/vitorpamplona/crypto/ec/P256KeyPair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPrivateKey ()[B
+	public final fun getPublicKey ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/vitorpamplona/crypto/kdf/Hkdf {
@@ -264,5 +288,9 @@ public final class com/vitorpamplona/crypto/sha2/Sha256_jvmAndroidKt {
 	public static synthetic fun sha256Into$default ([B[BIILjava/lang/Object;)[B
 	public static final fun sha256StreamWithCount (Ljava/io/InputStream;I)Lkotlin/Pair;
 	public static synthetic fun sha256StreamWithCount$default (Ljava/io/InputStream;IILjava/lang/Object;)Lkotlin/Pair;
+}
+
+public final class com/vitorpamplona/crypto/sha2/Sha384Kt {
+	public static final fun sha384 ([B)[B
 }
 
