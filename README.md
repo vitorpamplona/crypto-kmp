@@ -1,12 +1,22 @@
 # crypto-kmp
 
+[![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/crypto-kmp/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/crypto-kmp/releases)
+[![Last Version](https://img.shields.io/github/release/vitorpamplona/crypto-kmp.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/crypto-kmp/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.crypto/crypto?label=Maven%20Central&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.crypto/crypto)
+[![JitPack snapshots](https://img.shields.io/badge/snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/crypto-kmp)
+[![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/crypto-kmp/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/crypto-kmp/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/github/license/vitorpamplona/crypto-kmp?labelColor=27303D&color=0877d2)](LICENSE)
+
 Cryptographic primitives for Kotlin Multiplatform: JVM, Android, iOS, macOS, Linux, JavaScript
 and Wasm. The library depends on nothing but the Kotlin stdlib. It uses the platform's implementation where
 one is fast and available (JCA on the JVM and Android, CommonCrypto on Apple) and pure Kotlin
 everywhere else. The AES and GHASH cores are constant-time.
 
-It is the crypto layer of [Quartz](https://github.com/vitorpamplona/amethyst/tree/main/quartz)
-(the Nostr library behind Amethyst) and of [quic-kmp](https://github.com/vitorpamplona/quic-kmp).
+It is the crypto layer of [Quartz](https://github.com/vitorpamplona/quartz) (the Nostr library
+behind Amethyst), [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (the MLS engine under
+[marmot-kmp](https://github.com/vitorpamplona/marmot-kmp) and
+[cordn-kmp](https://github.com/vitorpamplona/cordn-kmp)) and
+[quic-kmp](https://github.com/vitorpamplona/quic-kmp).
 
 ## Install
 

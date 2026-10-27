@@ -1,7 +1,8 @@
 # crypto-kmp
 
-The cryptographic primitives behind [Quartz](https://github.com/vitorpamplona/amethyst/tree/main/quartz)
-and [quic-kmp](https://github.com/vitorpamplona/quic-kmp), as a small Kotlin Multiplatform library with
+The cryptographic primitives behind [Quartz](https://github.com/vitorpamplona/quartz),
+[mls-kmp](https://github.com/vitorpamplona/mls-kmp) (and through it marmot-kmp and cordn-kmp) and
+[quic-kmp](https://github.com/vitorpamplona/quic-kmp), as a small Kotlin Multiplatform library with
 no dependencies beyond the Kotlin stdlib. Published to Maven Central as
 `com.vitorpamplona.crypto:crypto`. The code started in Quartz and moved here so a QUIC client (or
 anything else) can hash, MAC and encrypt without pulling in a Nostr library.
@@ -82,7 +83,8 @@ anything else) can hash, MAC and encrypt without pulling in a Nostr library.
   `GeneralSecurityException`), and `decryptOrNull` returns `null` for exactly the latter. Wipe
   secret temporaries (`fill(0)`) once done with them.
 - Releases follow semantic versioning: a breaking change to the public API bumps the major
-  version. Quartz and quic-kmp pin a version, so a breaking change needs matching changes there.
+  version. Quartz, mls-kmp, quic-kmp, marmot-kmp, cordn-kmp and Amethyst pin a version and are
+built to agree on it, so a breaking change needs matching releases there.
 - Commits: conventional commits (`feat:`, `fix:`, …). Never `--no-verify`.
 
 ## Releasing
