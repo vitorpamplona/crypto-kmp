@@ -74,7 +74,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: vitorpamplona/magpie
-          ref: f0dc6104bbba8274db6a1a602500752b52294e1c
+          ref: 38464a203cc2e0dbffea34c1433b8cdf9f6e2a26
           path: .magpie
 
       # Uploads every publication to the signer's Blossom servers (kind 10063) and signs one
