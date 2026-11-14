@@ -224,7 +224,7 @@ publishing {
 // Magpie isn't on the Gradle Plugin Portal yet: the release workflow checks it out and passes
 // -PmagpieDir, which settings.gradle.kts includes as a build and the root build.gradle.kts puts on
 // the classpath. Every other build skips it. Its relays come from gradle.properties
-// (magpie.relays), so nothing here names Magpie's types.
+// (magpie.indexRelays), so nothing here names Magpie's types.
 if (providers.gradleProperty("magpieDir").isPresent) {
     apply(plugin = "com.vitorpamplona.magpie.publish")
 }

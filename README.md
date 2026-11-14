@@ -22,7 +22,8 @@ behind Amethyst), [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (the MLS e
 Releases are published on Nostr and Blossom with [Magpie](https://github.com/vitorpamplona/magpie),
 not on Maven Central (versions up to 2.1.0 are on Central). Magpie's settings plugin serves them to
 Gradle as a Maven repository, and accepts only releases signed by the key that
-`vitorpamplona.com/.well-known/nostr.json` names as `releases`. In `settings.gradle.kts`:
+`vitorpamplona.com/.well-known/nostr.json` names as `releases`, read from the relays that file
+lists for it: no relay to configure. In `settings.gradle.kts`:
 
 ```kotlin
 plugins {
@@ -30,7 +31,6 @@ plugins {
 }
 
 magpie {
-    relays("wss://relay.damus.io", "wss://nos.lol")
     group("com.vitorpamplona.crypto")
 }
 ```
