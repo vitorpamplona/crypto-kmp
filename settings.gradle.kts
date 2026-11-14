@@ -13,6 +13,10 @@ dependencyResolutionManagement {
     }
 }
 
+// Magpie (Nostr + Blossom publishing) from a checkout, for release builds: -PmagpieDir=<path>.
+// The root build.gradle.kts then puts its plugin on the build script classpath.
+providers.gradleProperty("magpieDir").orNull?.let { includeBuild(it) }
+
 rootProject.name = "crypto-kmp"
 include(":crypto")
 

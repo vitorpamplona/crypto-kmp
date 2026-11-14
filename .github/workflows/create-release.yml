@@ -68,13 +68,24 @@ jobs:
         run: |
           echo "ORG_GRADLE_PROJECT_VERSION_NAME=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
 
+      # Releases go to Nostr + Blossom through Magpie, which isn't on the Plugin Portal yet: a
+      # pinned commit, included as a build by -PmagpieDir. Bump the ref to take a new Magpie.
+      - name: Checkout Magpie
+        uses: actions/checkout@v7
+        with:
+          repository: vitorpamplona/magpie
+          ref: 3fbfd5532f3b287b46380b17eb8f9bd122767bd5
+          path: .magpie
+
+      # Uploads every publication to the signer's Blossom servers (kind 10063) and signs one
+      # release event (kind 3071) for all of them, sent to its NIP-65 write relays and
+      # magpie.archivalRelays. The key never reaches CI: MAGPIE_BUNKER is a NIP-46 bunker URI,
+      # and vitorpamplona.com/.well-known/nostr.json must name it as "releases", or the publish
+      # refuses to sign (consumers would refuse the release anyway).
       - name: Publish
-        run: ./gradlew :crypto:publishAllPublicationsToMavenCentral --no-configuration-cache
+        run: ./gradlew :crypto:publishToNostr -PmagpieDir=.magpie
         env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          MAGPIE_BUNKER: ${{ secrets.MAGPIE_BUNKER }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

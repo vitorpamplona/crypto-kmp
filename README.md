@@ -2,7 +2,6 @@
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/crypto-kmp/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/crypto-kmp/releases)
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/crypto-kmp.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/crypto-kmp/releases/latest)
-[![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.crypto/crypto?label=Maven%20Central&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.crypto/crypto)
 [![JitPack snapshots](https://img.shields.io/badge/snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/crypto-kmp)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/crypto-kmp/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/crypto-kmp/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/crypto-kmp?labelColor=27303D&color=0877d2)](LICENSE)
@@ -20,11 +19,36 @@ behind Amethyst), [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (the MLS e
 
 ## Install
 
+Releases are published on Nostr and Blossom with [Magpie](https://github.com/vitorpamplona/magpie),
+not on Maven Central (versions up to 2.1.0 are on Central). Magpie's settings plugin serves them to
+Gradle as a Maven repository, and accepts only releases signed by the key that
+`vitorpamplona.com/.well-known/nostr.json` names as `releases`. In `settings.gradle.kts`:
+
+```kotlin
+plugins {
+    id("com.vitorpamplona.magpie") version "<magpie version>"
+}
+
+magpie {
+    relays("wss://relay.damus.io", "wss://nos.lol")
+    group("com.vitorpamplona.crypto")
+}
+```
+
+Then depend on it as usual:
+
 ```kotlin
 dependencies {
     implementation("com.vitorpamplona.crypto:crypto:<version>")
 }
 ```
+
+Magpie isn't on the Gradle Plugin Portal yet: until it is, put a checkout of it in
+`pluginManagement { includeBuild("../magpie") }` and request the plugin without a version.
+
+The first resolution pins the release key and each version's manifest in `gradle/magpie.lock`;
+commit it. Without Magpie, JitPack builds any commit:
+[jitpack.io/#vitorpamplona/crypto-kmp](https://jitpack.io/#vitorpamplona/crypto-kmp).
 
 | Requirement | |
 |---|---|
