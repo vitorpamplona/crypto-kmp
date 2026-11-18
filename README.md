@@ -27,7 +27,7 @@ lists for it: no relay to configure. In `settings.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("com.vitorpamplona.magpie") version "0.1.0"
+    id("com.vitorpamplona.magpie") version "0.1.1"
 }
 
 magpie {
