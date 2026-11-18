@@ -110,5 +110,5 @@ write relays); `magpie.indexRelays` is only where its relay list is looked up (`
 It needs the `MAGPIE_BUNKER` secret, a NIP-46 `bunker://` URI for the release key, and refuses to
 sign unless `vitorpamplona.com/.well-known/nostr.json` lists that key as `releases`. A release is
 immutable: a tag that already has a release fails, so a bad release is fixed by a new version. To
-try it locally: `./gradlew :crypto:publishToNostr --dry-run` (everything but the upload and the
+try it locally: `./gradlew :crypto:publishToNostr --check-only` (everything but the upload and the
 signatures) with `MAGPIE_BUNKER` or `MAGPIE_NSEC` set.
