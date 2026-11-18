@@ -8,6 +8,7 @@ androidxTestRunner = "1.7.0"
 bouncycastle = "1.83"
 kotlin = "2.4.21"
 kotlinxBenchmark = "0.5.0"
+magpie = "0.1.0"
 spotless = "8.10.4"
 
 [libraries]
@@ -26,3 +27,4 @@ diffplugSpotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlinAllOpen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinxBenchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlinxBenchmark" }
+magpiePublish = { id = "com.vitorpamplona.magpie.publish", version.ref = "magpie" }

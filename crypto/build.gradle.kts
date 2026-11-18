@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     `maven-publish`
+    // Releases: publishToNostr. Its relays come from gradle.properties (magpie.*).
+    alias(libs.plugins.magpiePublish)
 }
 
 kotlin {
@@ -219,12 +221,4 @@ publishing {
             }
         }
     }
-}
-
-// Magpie isn't on the Gradle Plugin Portal yet: the release workflow checks it out and passes
-// -PmagpieDir, which settings.gradle.kts includes as a build and the root build.gradle.kts puts on
-// the classpath. Every other build skips it. Its relays come from gradle.properties
-// (magpie.indexRelays), so nothing here names Magpie's types.
-if (providers.gradleProperty("magpieDir").isPresent) {
-    apply(plugin = "com.vitorpamplona.magpie.publish")
 }

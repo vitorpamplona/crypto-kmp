@@ -27,7 +27,7 @@ lists for it: no relay to configure. In `settings.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("com.vitorpamplona.magpie") version "<magpie version>"
+    id("com.vitorpamplona.magpie") version "0.1.0"
 }
 
 magpie {
@@ -43,8 +43,8 @@ dependencies {
 }
 ```
 
-Magpie isn't on the Gradle Plugin Portal yet: until it is, put a checkout of it in
-`pluginManagement { includeBuild("../magpie") }` and request the plugin without a version.
+Magpie checks signatures inside the Gradle daemon, so Gradle has to run on Java 21 or newer
+(your project can still target older Java with a toolchain).
 
 The first resolution pins the release key and each version's manifest in `gradle/magpie.lock`;
 commit it. Without Magpie, JitPack builds any commit:
