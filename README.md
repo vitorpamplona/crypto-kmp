@@ -2,6 +2,7 @@
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/crypto-kmp/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/crypto-kmp/releases)
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/crypto-kmp.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/crypto-kmp/releases/latest)
+[![Magpie](https://img.shields.io/github/v/release/vitorpamplona/crypto-kmp?label=Magpie%20%28Nostr%20%2B%20Blossom%29&labelColor=27303D&color=7a4fd6)](#install)
 [![JitPack snapshots](https://img.shields.io/badge/snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/crypto-kmp)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/crypto-kmp/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/crypto-kmp/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/crypto-kmp?labelColor=27303D&color=0877d2)](LICENSE)
@@ -39,7 +40,7 @@ Then depend on it as usual:
 
 ```kotlin
 dependencies {
-    implementation("com.vitorpamplona.crypto:crypto:<version>")
+    implementation("com.vitorpamplona.crypto:crypto:2.1.1")
 }
 ```
 
