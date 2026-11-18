@@ -3,8 +3,8 @@
 The cryptographic primitives behind [Quartz](https://github.com/vitorpamplona/quartz),
 [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (and through it marmot-kmp and cordn-kmp) and
 [quic-kmp](https://github.com/vitorpamplona/quic-kmp), as a small Kotlin Multiplatform library with
-no dependencies beyond the Kotlin stdlib. Published to Maven Central as
-`com.vitorpamplona.crypto:crypto`. The code started in Quartz and moved here so a QUIC client (or
+no dependencies beyond the Kotlin stdlib. Published as `com.vitorpamplona.crypto:crypto` on Nostr
+and Blossom through [Magpie](https://github.com/vitorpamplona/magpie) (Maven Central up to 2.1.0). The code started in Quartz and moved here so a QUIC client (or
 anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 
 ## Layout
@@ -101,6 +101,15 @@ asks, and before opening, revising or merging one by either path, use the `ngit-
 ## Releasing
 
 Bump `VERSION_NAME` in `gradle.properties`, then push a `v<version>` tag. The
-`create-release.yml` workflow runs the Apple tests on macOS, then tests, publishes to Maven
-Central and opens the GitHub release. It needs the same signing secrets as quic-kmp
-(`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD`).
+`create-release.yml` workflow runs the Apple tests on macOS, then tests, publishes and opens the
+GitHub release. Publishing is Magpie's `publishToNostr` (the `com.vitorpamplona.magpie.publish`
+plugin from the Gradle Plugin Portal, its version in `libs.versions.toml`). It uploads
+every publication to the signer's Blossom servers (its kind 10063) and signs one release event
+(kind 3071) for all of them, sent to the key's own relays (the ones `nostr.json` lists for it and
+its NIP-65 write relays) and `magpie.archivalRelays`; `magpie.indexRelays` is only where its
+relay list is looked up (`gradle.properties`). It needs the `MAGPIE_BUNKER` secret, a NIP-46 `bunker://` URI for the
+release key, and refuses to sign unless `vitorpamplona.com/.well-known/nostr.json` lists that key
+as `releases`. A release is immutable: a tag that already has a release fails, so a bad release is
+fixed by a new version. To try it locally:
+`./gradlew :crypto:publishToNostr --dry-run` (everything but the upload and the signatures) with
+`MAGPIE_BUNKER` or `MAGPIE_NSEC` set.

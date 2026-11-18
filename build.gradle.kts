@@ -3,9 +3,9 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.androidxBenchmark) apply false
-    alias(libs.plugins.vanniktech.mavenPublish) apply false
     alias(libs.plugins.kotlinAllOpen) apply false
     alias(libs.plugins.kotlinxBenchmark) apply false
+    alias(libs.plugins.magpiePublish) apply false
     alias(libs.plugins.diffplugSpotless)
 }
 
