@@ -3,8 +3,10 @@
 The cryptographic primitives behind [Quartz](https://github.com/vitorpamplona/quartz),
 [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (and through it marmot-kmp and cordn-kmp) and
 [quic-kmp](https://github.com/vitorpamplona/quic-kmp), as a small Kotlin Multiplatform library with
-no dependencies beyond the Kotlin stdlib. Published as `com.vitorpamplona.crypto:crypto` on Nostr
-and Blossom through [Magpie](https://github.com/vitorpamplona/magpie) (Maven Central up to 2.1.0). The code started in Quartz and moved here so a QUIC client (or
+no dependencies beyond the Kotlin stdlib. Published as `com.vitorpamplona.crypto:crypto` on Maven
+Central and on Nostr + Blossom through [Magpie](https://github.com/vitorpamplona/magpie), the same
+files on both (2.1.1 is on Nostr only). It has no Nostr in it, so Maven Central keeps it usable by
+projects that don't use Magpie, and so are mls-kmp and quic-kmp, which depend on it. The code started in Quartz and moved here so a QUIC client (or
 anything else) can hash, MAC and encrypt without pulling in a Nostr library.
 
 ## Layout
@@ -101,8 +103,13 @@ asks, and before opening, revising or merging one by either path, use the `ngit-
 ## Releasing
 
 Bump `VERSION_NAME` in `gradle.properties`, then push a `v<version>` tag. The
-`create-release.yml` workflow runs the Apple tests on macOS, then tests, publishes and opens the
-GitHub release. Publishing is Magpie's `publishToNostr` (the `com.vitorpamplona.magpie.publish`
+`create-release.yml` workflow runs the Apple tests on macOS, then two jobs that don't wait for each
+other: `central` tests and publishes to Maven Central with vanniktech's plugin
+(`publishAllPublicationsToMavenCentral`, signed with `SIGNING_PRIVATE_KEY`/`SIGNING_PASSWORD`,
+uploaded with `SONATYPE_USERNAME`/`SONATYPE_PASSWORD`), and `nostr` tests, publishes to Nostr +
+Blossom and opens the GitHub release. When one channel fails (Central's monthly upload limit, an
+unanswered signer), re-run only that job. Both build the same sources, so their files are
+byte-identical. Nostr publishing is Magpie's `publishToNostr` (the `com.vitorpamplona.magpie.publish`
 plugin from the Gradle Plugin Portal, its version in `libs.versions.toml`). It uploads every
 publication to the signer's Blossom servers (its kind 10063) and signs one release event (kind 3071)
 for all of them, sent to the key's own relays (the ones `nostr.json` lists for it and its NIP-65

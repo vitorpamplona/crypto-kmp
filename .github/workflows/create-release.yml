@@ -26,8 +26,56 @@ jobs:
       - name: Check iOS and macOS
         run: ./gradlew :crypto:iosSimulatorArm64Test :crypto:macosArm64Test :crypto:compileTestKotlinIosArm64
 
+  # Every release goes to Maven Central and to Nostr + Blossom, in two jobs that don't wait for
+  # each other: Central's monthly upload limit, or a signer nobody answered, fails one channel
+  # without holding back the other, and "Re-run failed jobs" retries only the one that failed.
+  # Both build the same sources, so both get byte-identical files (the build is reproducible).
   # Apple klibs cross-compile on Linux; only Apple test binaries need a Mac.
-  deploy:
+  central:
+    needs: test-apple
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Cached Konan
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle*') }}-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      - name: Linter (gradle)
+        run: ./gradlew spotlessCheck
+
+      - name: Check
+        run: ./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsTest :crypto:wasmJsTest :crypto:compileAppleMainKotlinMetadata
+
+      # Tag v1.2.3 publishes version 1.2.3.
+      - name: Set version for tag
+        run: |
+          echo "ORG_GRADLE_PROJECT_VERSION_NAME=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      # vanniktech's plugin signs every file and uploads one bundle to the Central Portal, which
+      # releases it automatically once it validates. A version already on Central fails here.
+      - name: Publish to Maven Central
+        run: ./gradlew :crypto:publishAllPublicationsToMavenCentral --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+
+  nostr:
     needs: test-apple
     runs-on: ubuntu-latest
     permissions:
@@ -58,11 +106,6 @@ jobs:
       - name: Check
         run: ./gradlew :crypto:checkKotlinAbi :crypto:jvmTest :crypto:testAndroidHostTest :crypto:linuxX64Test :crypto:jsTest :crypto:wasmJsTest :crypto:compileAppleMainKotlinMetadata
 
-      # The library only: the unpublished benchmark module's npm and Maven dependencies
-      # mustn't be able to block a release.
-      - name: Build (gradle)
-        run: ./gradlew :crypto:assemble
-
       # Tag v1.2.3 publishes version 1.2.3.
       - name: Set version for tag
         run: |
@@ -71,11 +114,15 @@ jobs:
       # Magpie's publishToNostr (the plugin version is in libs.versions.toml) uploads every
       # publication to the signer's Blossom servers (kind 10063) and signs one release event
       # (kind 3071) for all of them, sent to the key's own relays (its kind 10002 and nostr.json).
-      # The key never reaches CI: MAGPIE_BUNKER is a NIP-46 bunker URI, and vitorpamplona.com/.well-known/nostr.json must name it as "releases", or the publish
-      # refuses to sign (consumers would refuse the release anyway).
-      - name: Publish
-        run: ./gradlew :crypto:publishToNostr
+      # The key never reaches CI: MAGPIE_BUNKER is a NIP-46 bunker URI, and
+      # vitorpamplona.com/.well-known/nostr.json must name it as "releases", or the publish
+      # refuses to sign (consumers would refuse the release anyway). The PGP key signs the files
+      # here too, as for Central (each job makes its own .asc files; what they sign is identical).
+      - name: Publish to Nostr
+        run: ./gradlew :crypto:publishToNostr --no-configuration-cache
         env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
           MAGPIE_BUNKER: ${{ secrets.MAGPIE_BUNKER }}
 
       - name: Create Release
