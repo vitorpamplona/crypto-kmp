@@ -1,3 +1,5 @@
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
@@ -5,8 +7,9 @@ import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
-    `maven-publish`
-    // Releases: publishToNostr. Its relays come from gradle.properties (magpie.*).
+    // Releases go to Maven Central (publishAllPublicationsToMavenCentral) and to Nostr + Blossom
+    // (publishToNostr, its relays from gradle.properties' magpie.*): the same publications on both.
+    alias(libs.plugins.vanniktech.mavenPublish)
     alias(libs.plugins.magpiePublish)
 }
 
@@ -183,42 +186,52 @@ kotlin {
     }
 }
 
-// Releases go to Nostr + Blossom through Magpie (https://github.com/vitorpamplona/magpie), which
-// reuses this maven-publish setup: publishToNostr publishes these same publications into
-// build/magpie-repo, uploads the files to Blossom and signs one release event for all of them.
-// The coordinates stay com.vitorpamplona.crypto:crypto(-<target>), from gradle.properties, and
-// are set on the publications only: the project's group names the klibs (crypto-kmp:crypto), and
-// changing it would change their ABI.
-publishing {
-    publications.withType<MavenPublication>().configureEach {
-        groupId = providers.gradleProperty("GROUP").get()
-        version = providers.gradleProperty("VERSION_NAME").get()
-        pom {
-            name.set("Crypto for Kotlin Multiplatform")
-            description.set(
-                "Pure-Kotlin and platform-backed SHA-1/2, HMAC, HKDF, AES-GCM/CBC, ChaCha20-Poly1305, " +
-                    "X25519 and Ed25519 for JVM, Android, iOS, macOS, Linux, JavaScript and Wasm",
-            )
-            inceptionYear.set("2026")
-            url.set("https://github.com/vitorpamplona/crypto-kmp/")
-            licenses {
-                license {
-                    name.set("MIT License")
-                    url.set("https://github.com/vitorpamplona/crypto-kmp/blob/main/LICENSE")
-                }
+// One maven-publish setup for both channels: vanniktech's plugin builds the publications (sources
+// and empty javadoc jars, signed when CI passes a key) and uploads them to Maven Central, and
+// Magpie's publishToNostr publishes the same publications to Nostr + Blossom. groupId, artifactId
+// and version come from gradle.properties (GROUP, POM_ARTIFACT_ID, VERSION_NAME), so CI can set
+// the version from the tag with ORG_GRADLE_PROJECT_VERSION_NAME. They are the publications'
+// coordinates only: the klibs keep their unique name, crypto-kmp:crypto (checkKotlinAbi).
+mavenPublishing {
+    configure(
+        KotlinMultiplatform(
+            sourcesJar = SourcesJar.Sources(),
+        ),
+    )
+
+    publishToMavenCentral(automaticRelease = true)
+
+    // Sign only when a key is configured: the release workflow passes one, while JitPack and
+    // local publishToMavenLocal builds have none and would otherwise fail on the signing task.
+    // Maven Central still rejects an unsigned upload, so a release can't slip out unsigned.
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
+
+    pom {
+        name = "Crypto for Kotlin Multiplatform"
+        description =
+            "Pure-Kotlin and platform-backed SHA-1/2, HMAC, HKDF, AES-GCM/CBC, ChaCha20-Poly1305, " +
+            "X25519 and Ed25519 for JVM, Android, iOS, macOS, Linux, JavaScript and Wasm"
+        inceptionYear = "2026"
+        url = "https://github.com/vitorpamplona/crypto-kmp/"
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://github.com/vitorpamplona/crypto-kmp/blob/main/LICENSE"
             }
-            developers {
-                developer {
-                    id.set("vitorpamplona")
-                    name.set("Vitor Pamplona")
-                    url.set("http://vitorpamplona.com")
-                    email.set("vitor@vitorpamplona.com")
-                }
+        }
+        developers {
+            developer {
+                id = "vitorpamplona"
+                name = "Vitor Pamplona"
+                url = "http://vitorpamplona.com"
+                email = "vitor@vitorpamplona.com"
             }
-            scm {
-                url.set("https://github.com/vitorpamplona/crypto-kmp")
-                connection.set("https://github.com/vitorpamplona/crypto-kmp.git")
-            }
+        }
+        scm {
+            url = "https://github.com/vitorpamplona/crypto-kmp"
+            connection = "https://github.com/vitorpamplona/crypto-kmp.git"
         }
     }
 }

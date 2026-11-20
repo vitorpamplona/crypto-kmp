@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlinAllOpen) apply false
     alias(libs.plugins.kotlinxBenchmark) apply false
     alias(libs.plugins.magpiePublish) apply false
+    alias(libs.plugins.vanniktech.mavenPublish) apply false
     alias(libs.plugins.diffplugSpotless)
 }
 

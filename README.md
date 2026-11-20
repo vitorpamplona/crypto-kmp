@@ -2,6 +2,7 @@
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/crypto-kmp/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/crypto-kmp/releases)
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/crypto-kmp.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/crypto-kmp/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.crypto/crypto?label=Maven%20Central&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.crypto/crypto)
 [![Magpie](https://img.shields.io/github/v/release/vitorpamplona/crypto-kmp?label=Magpie%20%28Nostr%20%2B%20Blossom%29&labelColor=27303D&color=7a4fd6)](#install)
 [![JitPack snapshots](https://img.shields.io/badge/snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/crypto-kmp)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/crypto-kmp/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/crypto-kmp/actions/workflows/build.yml)
@@ -20,9 +21,17 @@ behind Amethyst), [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (the MLS e
 
 ## Install
 
-Releases are published on Nostr and Blossom with [Magpie](https://github.com/vitorpamplona/magpie),
-not on Maven Central (versions up to 2.1.0 are on Central). Magpie's settings plugin serves them to
-Gradle as a Maven repository, and accepts only releases signed by the key that
+Releases are published on Maven Central and on Nostr + Blossom, with the same files on both.
+From Maven Central, nothing to set up:
+
+```kotlin
+dependencies {
+    implementation("com.vitorpamplona.crypto:crypto:2.1.2")
+}
+```
+
+Or from Nostr with [Magpie](https://github.com/vitorpamplona/magpie), whose settings plugin serves
+the releases to Gradle as a Maven repository and accepts only the ones signed by the key that
 `vitorpamplona.com/.well-known/nostr.json` names as `releases`, read from the relays that file
 lists for it: no relay to configure. In `settings.gradle.kts`:
 
@@ -36,19 +45,12 @@ magpie {
 }
 ```
 
-Then depend on it as usual:
-
-```kotlin
-dependencies {
-    implementation("com.vitorpamplona.crypto:crypto:2.1.1")
-}
-```
-
 Magpie checks signatures inside the Gradle daemon, so Gradle has to run on Java 21 or newer
 (your project can still target older Java with a toolchain).
 
 The first resolution pins the release key and each version's manifest in `gradle/magpie.lock`;
-commit it. Without Magpie, JitPack builds any commit:
+commit it. Version 2.1.1 is on Nostr only; Maven Central has up to 2.1.0 and every release from
+2.1.2 on. JitPack builds any commit:
 [jitpack.io/#vitorpamplona/crypto-kmp](https://jitpack.io/#vitorpamplona/crypto-kmp).
 
 | Requirement | |
